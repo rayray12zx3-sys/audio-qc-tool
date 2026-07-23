@@ -357,7 +357,7 @@ function renderMetrics(id, a) {
     { label: 'Silent %', value: (a.silentRatio * 100).toFixed(1), unit: '%', flag: 'fw' }
   ];
   document.getElementById(id).innerHTML = metrics.map(m =>
-    `<div class="mc f${m.flag}"><div class="ml">${m.label}</div><div class="mv">${m.value}</div><div class="mn">${m.unit}</div></div>`
+    `<div class="mc ${m.flag}"><div class="ml">${m.label}</div><div class="mv">${m.value}</div><div class="mn">${m.unit}</div></div>`
   ).join('');
 }
 
@@ -391,7 +391,6 @@ function renderWaveform(canvasId, buf) {
   canvas.height = canvas.offsetHeight * dpr;
   ctx.scale(dpr, dpr);
   const w = canvas.offsetWidth, h = canvas.offsetHeight;
-  ctx.fillStyle = 'var(--panel-2)'; // 此處需要在 CSS 設置或用內聯樣式
   ctx.fillStyle = '#20242c';
   ctx.fillRect(0, 0, w, h);
   const ch0 = buf.getChannelData(0);
@@ -441,9 +440,9 @@ function renderSpectrum(specId, spec) {
 
 function render(tid, a, filename, buf) {
   S[tid] = { a, filename };
-  document.getElementById('tab-' + tid) = document.querySelector(`.tab[data-track="${tid}"]`);
-  if (!document.querySelector(`.tab[data-track="${tid}"]`)) return;
-  document.querySelector(`.tab[data-track="${tid}"]`).classList.add('done');
+  const tabEl = document.querySelector(`.tab[data-track="${tid}"]`);
+  if (!tabEl) return;
+  tabEl.classList.add('done');
   renderMetrics('mg-' + tid, a);
   renderDiags('dl-' + tid, tid === 'voice' ? diagVoice(a) : diagBgm(a));
   const fx = tid === 'voice' ? buildVoiceFx(a) : buildBgmFx(a);
