@@ -654,6 +654,15 @@ function diagVoice(a) {
     d.push({ title:'動態範圍過大', lvl: a.crest>26?'severe':'mid',
       desc:`峰值與 K-weighted RMS 差 <code>${a.crest.toFixed(1)} dB</code>，音量忽大忽小，建議壓縮控制。` });
   }
+  {
+    const midT = (TR.min + TR.max) / 2;
+    const rawGain = midT - a.kwRms;
+    const safeGain = -a.smpPkDb - 3;
+    if (rawGain > safeGain + 0.1) {
+      d.push({ title:'Clip Gain 削波風險', lvl:'severe',
+        desc:`欲達目標響度需增益 <code>+${rawGain.toFixed(1)} dB</code>，但 Sample Peak 為 <code>${a.smpPkDb.toFixed(1)} dBFS</code>，全額增益將導致峰值超過 0 dBFS 削波。已自動限制 Clip Gain 於安全上限 <code>+${safeGain.toFixed(1)} dB</code>，剩餘 <code>+${(rawGain-safeGain).toFixed(1)} dB</code> 改由 Compressor MakeUp 承擔（見下方效果器建議）。` });
+    }
+  }
   if (a.lra > 22) {
     d.push({ title:'響度變化範圍過大（LRA）', lvl:'mid',
       desc:`各句電平落差約 <code>${a.lra.toFixed(1)} dB</code>，句子間忽大忽小，建議加大壓縮比或使用 Speech Volume Leveler。` });
@@ -735,25 +744,40 @@ function buildVoiceFx(a) {
   const mid   = (min + max) / 2;
   const delta = mid - a.kwRms;
   const inRange = a.kwRms >= min && a.kwRms <= max;
+
+  // --- 削波保護：Clip Gain 硬上限 = 0 − Sample Peak − 安全餘裕(3dB) ---
+  const SAFETY_MARGIN = 3;
+  const maxSafeGain = Math.round((-a.smpPkDb - SAFETY_MARGIN) * 10) / 10;
+  const cgValRaw = Math.round(delta * 10) / 10;
+  const cgVal = cgValRaw > maxSafeGain ? maxSafeGain : cgValRaw;
+  const gainCapped = cgValRaw > maxSafeGain + 0.05;
+  const residual = Math.round((cgValRaw - cgVal) * 10) / 10; // 削減後尚未補足的增益，轉給 Compressor MakeUp
+
   const flags = voiceFlags(a);
+  if (Math.abs(residual) > 0.1) flags.needsComp = true; // 強制走壓縮承接殘餘增益
   const fx = [];
 
   // --- 方案一 Clip Gain 前置 ---
-  const cgVal = Math.round(delta * 10) / 10;
   fx.push({
     id:'clipgain', pathLabel:'方案一：Clip Gain 前置流（推薦，最乾淨）',
     name:'Clip Gain（前置粗校）',
-    why:`Delta = Target_Mid(${mid} dB) − K-RMS(${a.kwRms.toFixed(1)} dB) = ${cgVal>=0?'+':''}${cgVal} dB`,
+    why: gainCapped
+      ? `原始 Delta = ${cgValRaw>=0?'+':''}${cgValRaw} dB，但 Sample Peak 為 ${a.smpPkDb.toFixed(1)} dBFS，全額套用會削波。已限制於安全上限（0 − Sample Peak − ${SAFETY_MARGIN}dB 餘裕）= ${cgVal>=0?'+':''}${cgVal} dB`
+      : `Delta = Target_Mid(${mid} dB) − K-RMS(${a.kwRms.toFixed(1)} dB) = ${cgVal>=0?'+':''}${cgVal} dB`,
     params:[
-      ['Set Gain To', `${cgVal>=0?'+':''}${cgVal} dB`, '拉至目標中值，後續效果器 Gain 均設 0'],
+      ['Set Gain To', `${cgVal>=0?'+':''}${cgVal} dB`, gainCapped ? '⚠️ 已達削波保護上限，剩餘增益轉由 Compressor 承擔' : '拉至目標中值，後續效果器 Gain 均設 0'],
       ['Normalize All Peaks To','不使用','以增益值（非峰值正規化）控制，保留動態比例']
     ],
     steps:[
       '選取人聲 Clip → 右鍵 → <b>Audio Gain</b>（快捷鍵 G）',
       `<b>Set Gain To</b> 輸入 <b>${cgVal>=0?'+':''}${cgVal} dB</b>`,
-      '確認後進入效果鏈，Compressor MakeUp 與 Limiter Input Boost 均設 0（已完成增益補償，避免雙重疊加）'
+      gainCapped
+        ? `⚠️ 此素材動態範圍過大（Crest ${a.crest.toFixed(1)} dB），全額增益會使 Sample Peak 超過 0 dBFS 削波。剩餘 <b>${residual>=0?'+':''}${residual} dB</b> 已轉由下方 <b>Compressor MakeUp</b> 於壓縮後補足（此時訊號動態已被收窄，較安全）`
+        : '確認後進入效果鏈，Compressor MakeUp 與 Limiter Input Boost 均設 0（已完成增益補償，避免雙重疊加）'
     ],
-    note:`採用方案一後，以下 Dynamics 的 <b>MakeUp 設 0 dB</b>、Limiter 的 <b>Input Boost 設 0 dB</b>，防止雙重增益爆音。`
+    note: gainCapped
+      ? `⚠️ <b>削波保護已啟動</b>：Clip Gain 上限 = (0 − Sample Peak ${a.smpPkDb.toFixed(1)}dBFS − 安全餘裕${SAFETY_MARGIN}dB) = <b>${cgVal>=0?'+':''}${cgVal} dB</b>。剩餘 <b>${residual>=0?'+':''}${residual} dB</b> 已改由 <b>Compressor MakeUp</b> 承擔，Limiter Input Boost 仍設 0（Limiter 僅作最終安全門）。`
+      : `採用方案一後，以下 Dynamics 的 <b>MakeUp 設 0 dB</b>、Limiter 的 <b>Input Boost 設 0 dB</b>，防止雙重增益爆音。`
   });
 
   // --- DeNoise ---
@@ -819,7 +843,7 @@ function buildVoiceFx(a) {
   if (flags.needsComp) {
     const thr = Math.round(a.kwRms - 3);
     const ratio = a.crest > 26 ? '4:1' : '3:1';
-    const mkP1 = 0; // 方案一：不補增益
+    const mkP1 = Math.abs(residual) > 0.1 ? residual : 0; // 方案一：承接 Clip Gain 削波保護後的殘餘增益
     const mkP2 = clamp(Math.round(delta * 0.65), -24, 24); // 方案二：65% Delta
     const dp = [];
     if (a.noiseFloor > -40) {
@@ -832,7 +856,7 @@ function buildVoiceFx(a) {
     dp.push(['Compressor · Ratio',  ratio,  '動態範圍越大比例越高']);
     dp.push(['Compressor · Attack', '10 ms','保留起始子音清晰度']);
     dp.push(['Compressor · Release','150 ms','避免抽吸感（Pumping）']);
-    dp.push(['Compressor · MakeUp（方案一）', `0 dB`, 'Clip Gain 前置時設 0，不雙重補償']);
+    dp.push(['Compressor · MakeUp（方案一）', `${mkP1>=0?'+':''}${mkP1} dB`, mkP1!==0 ? `Clip Gain 已達削波上限，此處補足殘餘 ${mkP1>=0?'+':''}${mkP1} dB（壓縮後補償較安全）` : 'Clip Gain 前置時設 0，不雙重補償']);
     dp.push(['Compressor · MakeUp（方案二）', `${mkP2>=0?'+':''}${mkP2} dB`, `不採用 Clip Gain 時補 Delta 的 65%（${inRange?'合格勿補':'偏離目標'}）`]);
     fx.push({
       id:'dynamics', pathLabel:null,
