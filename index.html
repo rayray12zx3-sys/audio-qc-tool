@@ -841,7 +841,11 @@ function buildVoiceFx(a) {
 
   // --- Dynamics ---
   if (flags.needsComp) {
-    const thr = Math.round(a.kwRms - 3);
+    // 方案一：訊號已被 Clip Gain(cgVal) 前置拉高，Threshold 需跟著平移，
+    // 否則會用「未增益前」的電平當門檻，導致增益後幾乎整段訊號都被壓縮。
+    const thr1 = Math.round((a.kwRms + cgVal) - 3);
+    // 方案二：Compressor 之前沒有額外前置增益，維持原始 K-weighted RMS 為基準。
+    const thr2 = Math.round(a.kwRms - 3);
     const ratio = a.crest > 26 ? '4:1' : '3:1';
     const mkP1 = Math.abs(residual) > 0.1 ? residual : 0; // 方案一：承接 Clip Gain 削波保護後的殘餘增益
     const mkP2 = clamp(Math.round(delta * 0.65), -24, 24); // 方案二：65% Delta
@@ -852,7 +856,8 @@ function buildVoiceFx(a) {
       dp.push(['AutoGate · Release',   '100 ms', '避免語句尾音被切斷']);
       dp.push(['AutoGate · Hold',      '50 ms',  '最小保持時間']);
     }
-    dp.push(['Compressor · Threshold', `${thr} dB`, '基於 K-weighted RMS 計算的壓縮入口']);
+    dp.push(['Compressor · Threshold（方案一）', `${thr1} dB`, `訊號已被 Clip Gain ${cgVal>=0?'+':''}${cgVal} dB 拉高，Threshold 同步平移，避免整段被壓縮`]);
+    dp.push(['Compressor · Threshold（方案二）', `${thr2} dB`, '基於原始 K-weighted RMS 計算的壓縮入口（未前置增益）']);
     dp.push(['Compressor · Ratio',  ratio,  '動態範圍越大比例越高']);
     dp.push(['Compressor · Attack', '10 ms','保留起始子音清晰度']);
     dp.push(['Compressor · Release','150 ms','避免抽吸感（Pumping）']);
