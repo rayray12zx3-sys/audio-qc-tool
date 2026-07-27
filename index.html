@@ -276,7 +276,7 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
   <div class="trange-info">
     <span>區間：<b id="rDisp">−18 dB ~ −14 dB</b></span>
     <span>目標中值：<b id="mDisp">−16 dB</b></span>
-    <span class="note">單位 dB（K-weighted RMS，近似 LUFS）</span>
+    <span class="note">單位 dB（K-weighted Integrated Loudness，符合 EBU R128 雙重閘門，等同 LUFS）</span>
   </div>
 </div>
 
@@ -434,6 +434,48 @@ function kWeightedRms(mono, sr) {
   return toDb(Math.sqrt(ms / f.length));
 }
 
+// ===== Integrated Loudness（ITU-R BS.1770-4 / EBU R128 雙重閘門）=====
+// 取代單純全域 K-weighted RMS：靜音段過多的素材（如本工具常見的對白檔案）
+// 若用整段平均 RMS 測量，會被靜音段嚴重拉低、偏離人耳實際感知響度。
+// 官方演算法用 400ms 滑動區塊（75% overlap）+ 兩道閘門，排除靜音與過安靜段落後才取平均。
+function integratedLoudness(mono, sr) {
+  const c = kwCoeffs(sr);
+  const f = mono.slice();
+  biquadInPlace(f, c.hs);
+  biquadInPlace(f, c.hp);
+
+  const blockSize = Math.round(0.4 * sr); // 400ms
+  const hopSize   = Math.round(0.1 * sr); // 100ms（75% overlap）
+
+  // 素材過短（< 400ms），無法分區塊，退回全域 RMS
+  if (f.length < blockSize) {
+    let ms = 0;
+    for (let i = 0; i < f.length; i++) ms += f[i] * f[i];
+    return toDb(Math.sqrt(ms / Math.max(f.length, 1)));
+  }
+
+  const LUFS_OFFSET = -0.691; // ITU-R BS.1770 標準校正常數
+  const blocks = [];
+  for (let start = 0; start + blockSize <= f.length; start += hopSize) {
+    let ms = 0;
+    for (let i = start; i < start + blockSize; i++) ms += f[i] * f[i];
+    ms /= blockSize;
+    blocks.push({ ms, l: LUFS_OFFSET + 10 * Math.log10(Math.max(ms, 1e-12)) });
+  }
+
+  // 第一道：絕對閘門，丟棄低於 -70 LUFS 的區塊（真正的靜音／噪音底床）
+  const absGated = blocks.filter(b => b.l > -70);
+  if (absGated.length === 0) return -70;
+  const msAbs = avg(absGated.map(b => b.ms));
+  const loudAbs = LUFS_OFFSET + 10 * Math.log10(Math.max(msAbs, 1e-12));
+
+  // 第二道：相對閘門，丟棄低於（絕對閘門平均 − 10 LU）的區塊（安靜但非靜音的過渡段）
+  const relGated = absGated.filter(b => b.l > loudAbs - 10);
+  if (relGated.length === 0) return loudAbs;
+  const msRel = avg(relGated.map(b => b.ms));
+  return LUFS_OFFSET + 10 * Math.log10(Math.max(msRel, 1e-12));
+}
+
 // ===== True Peak（Catmull-Rom 三次插值，4x 過採樣）=====
 function truePeak(mono) {
   const n = mono.length;
@@ -534,7 +576,7 @@ function analyzeAudio(buf) {
   // True Peak（4x Catmull-Rom）
   const tpDb = truePeak(mono);
   // K-Weighted RMS（感知響度）
-  const kwRms = kWeightedRms(mono, sr);
+  const kwRms = integratedLoudness(mono, sr);
   // 逐幀 RMS（50ms，用於 noiseFloor / LRA / silentRatio）
   const fLen = Math.round(sr * 0.05);
   const fDbs = [];
@@ -597,8 +639,9 @@ function analyzeAudio(buf) {
   const bands = {
     rumble: sumR(20, 80), bass: sumR(60, 250), lowMid: sumR(200, 400),
     mid: sumR(400, 2000), presence: sumR(2000, 5000),
-    hiss: sumR(8000, 16000), vocalOverlap: sumR(250, 4000),
-    pkRumble: peakFc(20, 100), pkMuddy: peakFc(200, 500), pkPresence: peakFc(2000, 5000)
+    sibilance: sumR(5000, 8000), hiss: sumR(8000, 16000), vocalOverlap: sumR(250, 4000),
+    pkRumble: peakFc(20, 100), pkMuddy: peakFc(200, 500), pkPresence: peakFc(2000, 5000),
+    pkSibilance: peakFc(5000, 8000)
   };
   return {
     sr, ch, dur: buf.duration,
@@ -683,6 +726,10 @@ function diagVoice(a) {
     d.push({ title:'高頻噪音／嘶聲', lvl: a.bands.hiss>0.10?'mid':'light',
       desc:`8kHz 以上能量佔比 <code>${(a.bands.hiss*100).toFixed(1)}%</code>，可能來自麥克風底噪或壓縮雜訊。` });
   }
+  if (a.bands.sibilance > 0.06) {
+    d.push({ title:'齒音過重（Sibilance）', lvl: a.bands.sibilance>0.12?'mid':'light',
+      desc:`5–8kHz 齒音頻段能量佔比 <code>${(a.bands.sibilance*100).toFixed(1)}%</code>，STFT 峰值頻率 <code>${a.bands.pkSibilance} Hz</code>，發 S/Sh/Z 等摩擦音時偏刺耳，建議加 DeEsser。` });
+  }
   if (a.zcr > 12000) {
     d.push({ title:'零交叉率偏高', lvl:'light',
       desc:`每秒零交叉次數 <code>${Math.round(a.zcr).toLocaleString()}</code>，高於正常語音範圍（3000–8000/s），可能含有明顯高頻雜訊或電磁干擾。` });
@@ -722,11 +769,12 @@ function voiceFlags(a) {
   const muddy  = a.bands.lowMid > 0.18;
   const dull   = a.bands.presence < 0.03;
   const hiss   = a.bands.hiss > 0.05;
+  const sibilance = a.bands.sibilance > 0.06; // 齒音／嘶聲（5–8kHz），與寬帶噪音 hiss 分開判定
   const denoiseAmt = clamp(Math.round((a.noiseFloor - NOISE_BASE) / 30 * 80), 0, 80);
   const needsComp  = a.crest > 18 || a.lra > 22 || Math.abs(delta) >= 1.5 || a.kwRms > max;
   return { clipGain:true, denoise:denoiseAmt>5, eq:rumble||muddy||dull,
-           dynamics:needsComp, deEsser:hiss, limiter:true,
-           rumble, muddy, dull, hiss, denoiseAmt, needsComp, delta };
+           dynamics:needsComp, deEsser:sibilance, limiter:true,
+           rumble, muddy, dull, hiss, sibilance, denoiseAmt, needsComp, delta };
 }
 function bgmFlags(a) {
   return {
@@ -877,16 +925,16 @@ function buildVoiceFx(a) {
   }
 
   // --- DeEsser ---
-  if (flags.hiss) {
+  if (flags.sibilance) {
     const deThr = Math.round(a.kwRms - 6);
     fx.push({
       id:'deesser', pathLabel:null,
       name:'DeEsser',
-      why:`8kHz 以上能量 ${(a.bands.hiss*100).toFixed(1)}%，抑制齒音／嘶聲`,
+      why:`5–8kHz 齒音頻段能量 ${(a.bands.sibilance*100).toFixed(1)}%，STFT 峰值 ${a.bands.pkSibilance}Hz，抑制齒音／嘶聲`,
       params:[
         ['Mode',             'Broadband', '整體頻段偵測，適合一般對白'],
         ['Threshold',        `${deThr} dB`, '觸發衰減的電平門檻'],
-        ['CenterFrequency',  '6500 Hz',   '齒音最明顯的頻率'],
+        ['CenterFrequency',  `${a.bands.pkSibilance} Hz`,   'STFT 偵測到的齒音峰值頻率'],
         ['Bandwidth',        '2000 Hz',   '影響範圍寬度'],
         ['Output Sibilance Only','False', '僅供試聽，正式套用需關閉']
       ],
@@ -1054,7 +1102,7 @@ function renderMetrics(id, a) {
   const pf = a.smpPkDb >= -0.3 ? 'fb' : a.tpDb > -1 ? 'fw' : 'fg';
   el.innerHTML = [
     mc('取樣率 / 聲道', `${a.sr}Hz / ${a.ch}ch`, `時長 ${a.dur.toFixed(1)}s`),
-    mc('K-weighted RMS（感知響度）', `${a.kwRms.toFixed(1)} dB`, kwNote(a.kwRms), kwFlag(a.kwRms)),
+    mc('Integrated Loudness（LUFS）', `${a.kwRms.toFixed(1)} dB`, kwNote(a.kwRms), kwFlag(a.kwRms)),
     mc('Sample Peak', `${a.smpPkDb.toFixed(1)} dBFS`, `削頂樣本 ${a.clipped}`, pf),
     mc('True Peak（4x 插值）', `${a.tpDb.toFixed(1)} dBTP`, a.tpDb > -1 ? '⚠ 超過 −1 dBTP' : '安全', pf),
     mc('噪音底床', `${a.noiseFloor.toFixed(1)} dBFS`, `基準 ${NOISE_BASE} dBFS`),
