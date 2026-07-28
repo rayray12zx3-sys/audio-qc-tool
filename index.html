@@ -897,26 +897,25 @@ function buildVoiceFx(a) {
   // ===== Step 0：Gain Staging 響度先行 =====
   fx.push({
     id:'clipgain', pathLabel:`Step 0 · Gain Staging（響度先行 / 目標平台：${PLATFORM.label}）`,
-    name:'Auto-Match Loudness + Clip Gain（前置粗校）',
+    name:'Clip Gain（精確增益前置）',
     why: gainCapped
       ? `原始 Delta = ${cgValRaw>=0?'+':''}${cgValRaw} dB，但套用後 True Peak 將超過 ${effTp} dBTP 安全上限（${OUT_FMT==='lossy'?'已依有損壓縮規則收斂':'依平台規範'}）。已限制於安全增益 = ${cgVal>=0?'+':''}${cgVal} dB`
       : `Delta = Target(${tgt} LUFS) − Integrated(${a.kwRms.toFixed(1)} LUFS) = ${cgVal>=0?'+':''}${cgVal} dB`,
     params:[
-      ['① Essential Sound → Auto-Match', '點擊執行一次', '先做非破壞性響度粗略對齊，作為後續微調基準'],
-      ['② Set Gain To', `${cgVal>=0?'+':''}${cgVal} dB`, gainCapped ? '⚠️ 已達削波保護上限，剩餘增益轉由 Compressor 承擔' : '拉至目標響度，後續效果器 Gain 均設 0'],
+      ['Set Gain To', `${cgVal>=0?'+':''}${cgVal} dB`, gainCapped ? '⚠️ 已達削波保護上限，剩餘增益轉由 Compressor 承擔' : '拉至目標響度，後續效果器 Gain 均設 0'],
       ['Normalize All Peaks To','不使用','以增益值（非峰值正規化）控制，保留動態比例']
     ],
     steps:[
-      `第一步：點擊 PR/AU 面板中的 <b>Auto-Match（自動匹配）響度</b>，完成非破壞性增益重構`,
       '選取人聲 Clip → 右鍵 → <b>Audio Gain</b>（快捷鍵 G）',
       `<b>Set Gain To</b> 輸入 <b>${cgVal>=0?'+':''}${cgVal} dB</b>`,
       gainCapped
         ? `⚠️ 此素材動態範圍過大（Crest ${a.crest.toFixed(1)} dB），全額增益會使 True Peak 超過 ${effTp} dBTP。剩餘 <b>${residual>=0?'+':''}${residual} dB</b> 已轉由 <b>Compressor MakeUp</b> 於壓縮後補足`
         : '確認後進入效果鏈，Compressor MakeUp 與 Limiter Input Boost 均設 0（避免雙重疊加）'
     ],
-    note: gainCapped
+    note: (gainCapped
       ? `⚠️ <b>削波保護已啟動</b>：Clip Gain 上限 = (${effTp}dBTP − True Peak ${a.tpDb.toFixed(1)}dBTP − 餘裕${SAFETY_MARGIN}dB) = <b>${cgVal>=0?'+':''}${cgVal} dB</b>。剩餘 <b>${residual>=0?'+':''}${residual} dB</b> 已改由 <b>Compressor MakeUp</b> 承擔。`
-      : `採用此步驟後，以下 Dynamics 的 <b>MakeUp 設 0 dB</b>、Limiter 的 <b>Input Boost 設 0 dB</b>，防止雙重增益爆音。`
+      : `採用此步驟後，以下 Dynamics 的 <b>MakeUp 設 0 dB</b>、Limiter 的 <b>Input Boost 設 0 dB</b>，防止雙重增益爆音。`)
+      + ` ⚠️ 請勿另外執行 PR/AU 的「Auto-Match（自動匹配）響度」——該功能目標值由 Adobe 內部演算法決定、與本工具計算基準不同，疊加會使最終響度偏離 ${tgt} LUFS 目標。此 Clip Gain 數值已是完整、精確的響度校正，一步到位。`
   });
 
   // ===== Step 1：Repair 修復（DeNoise）=====
@@ -1014,34 +1013,53 @@ function buildVoiceFx(a) {
 
   // ===== Step 3：EQ（頻段修飾 + 空氣感）=====
   if (flags.rumble || flags.muddy || flags.dull || flags.airShelf || flags.airBlock) {
-    const eb = [];
+    // 結構化 Band 定義：統一欄位（Type / Frequency / Gain / Q / Slope），依觸發順序自動編號
+    const bandDefs = [];
     if (flags.rumble) {
       const hpF = Math.min(100, a.bands.pkRumble + 20);
-      eb.push(['HP · Frequency', `${hpF} Hz`, `STFT 偵測峰值 ${a.bands.pkRumble}Hz + 20Hz 安全餘量`]);
-      eb.push(['HP · Slope', '−24 dB/Octave', '陡斜率，不影響人聲基頻 85Hz 以上']);
-      eb.push(['HP · Band Toggle', 'On', '啟用 High-Pass']);
+      bandDefs.push({
+        type: 'High-Pass Filter', freq: hpF, gain: null, q: null,
+        slope: '−24 dB/Octave',
+        reason: `STFT 偵測峰值 ${a.bands.pkRumble}Hz + 20Hz 安全餘量，濾除環境低頻噪音，不影響人聲基頻（85Hz 以上）`
+      });
     }
     if (flags.muddy) {
-      eb.push(['Band · Frequency', `${a.bands.pkMuddy} Hz`, `STFT 偵測到的中低頻堆積峰值`]);
-      eb.push(['Band · Gain', '−3 dB', '以耳聽確認後微調 ±1 dB']);
-      eb.push(['Band · Q', '1.4', '涵蓋 200–500Hz 濁厚區，不過窄']);
-      eb.push(['Band · Band Toggle', 'On', '啟用此 Band']);
+      bandDefs.push({
+        type: 'Bell（Cut）', freq: a.bands.pkMuddy, gain: -3, q: 1.4, slope: null,
+        reason: `STFT 偵測到中低頻堆積峰值，收斂濁厚感；以耳聽確認後可微調 ±1 dB`
+      });
     }
     if (flags.dull) {
-      eb.push(['Band · Frequency', `${a.bands.pkPresence} Hz`, `STFT 偵測到的臨場能量中心`]);
-      eb.push(['Band · Gain', '+3.5 dB', '提升清晰度；以耳聽確認後微調']);
-      eb.push(['Band · Q', '1.0', '中等寬度，自然提升不尖銳']);
-      eb.push(['Band · Band Toggle', 'On', '啟用此 Band']);
+      bandDefs.push({
+        type: 'Bell（Boost）', freq: a.bands.pkPresence, gain: 3.5, q: 1.0, slope: null,
+        reason: `STFT 偵測到臨場能量中心，提升清晰度；以耳聽確認後可微調`
+      });
     }
     if (flags.airShelf) {
-      const airGain = getAirGainMax();
-      eb.push(['Air Shelf · Frequency', '12000 Hz', '空氣感 High Shelf 中心頻率']);
-      eb.push(['Air Shelf · Gain', `+${airGain.toFixed(1)} dB`, OUT_FMT==='lossy' ? '已依有損壓縮規則從 +1.5dB 收斂至 +1.0dB，防止轉碼碎裂聲' : '三重防禦條件皆通過，安全提升明亮度']);
-      eb.push(['Air Shelf · Q / Slope', 'Shelf 標準斜率', '']);
-      eb.push(['Air Shelf · Band Toggle', 'On', `噪底 ${a.noiseFloor.toFixed(1)}dBFS / SNR ${a.snr.toFixed(1)}dB / SFM(8-16k) ${(a.sfm8k||0).toFixed(2)} / P_Sib ${(a.pSib||0).toFixed(1)}dBFS 皆通過安全閘門`]);
-    } else if (flags.airBlock) {
-      eb.push(['Air Shelf（12kHz）','已阻斷', flags.airBlock]);
+      bandDefs.push({
+        type: 'High Shelf', freq: 12000, gain: getAirGainMax(), q: null,
+        slope: 'Shelf 標準斜率',
+        reason: `噪底${a.noiseFloor.toFixed(1)}dBFS/SNR${a.snr.toFixed(1)}dB/SFM${(a.sfm8k||0).toFixed(2)}/P_Sib${(a.pSib||0).toFixed(1)}dBFS 三重防禦皆通過` + (OUT_FMT==='lossy' ? '，已依有損壓縮規則從 +1.5dB 收斂至 +1.0dB' : '，安全提升明亮度')
+      });
     }
+
+    const eb = [];
+    if (bandDefs.length > 0) {
+      eb.push(['── 總覽', `共 ${bandDefs.length} 個 Band`, `依序對映 Audition/PR Parametric EQ 的 Band 1 ~ Band ${bandDefs.length}，同軌其餘 Band 保持 Off`]);
+    }
+    bandDefs.forEach((b, i) => {
+      const n = i + 1;
+      eb.push([`Band ${n} · Filter Type`, b.type, b.reason]);
+      eb.push([`Band ${n} · Frequency`, `${b.freq} Hz`, '']);
+      if (b.gain !== null) eb.push([`Band ${n} · Gain`, `${b.gain>=0?'+':''}${b.gain.toFixed(1)} dB`, '']);
+      if (b.q !== null) eb.push([`Band ${n} · Q`, `${b.q}`, 'Q 值越低頻段越寬，越高越窄']);
+      if (b.slope) eb.push([`Band ${n} · Slope`, b.slope, '']);
+      eb.push([`Band ${n} · Toggle`, 'On', `啟用此 Band（面板第 ${n} 格）`]);
+    });
+    if (flags.airBlock && !flags.airShelf) {
+      eb.push(['Air Shelf（12kHz）', '已阻斷 · 不建立 Band', flags.airBlock]);
+    }
+
     fx.push({
       id:'eq', pathLabel:'Step 3 · EQ（等化器 / 空氣感）',
       name:'Parametric Equalizer',
@@ -1049,7 +1067,7 @@ function buildVoiceFx(a) {
       params:[['Main Gain', '0 dB', '維持輸出電平，由 Compressor/Limiter 處理音量'], ...eb],
       steps:[
         '效果面板搜尋 <b>Parametric Equalizer</b>，拖曳至音軌（Dynamics 之後）',
-        '依下表逐一啟用對應 Band，設定 Frequency / Gain / Q',
+        `依上表「總覽」列的 Band 數量，依序點開面板 Band 1 ~ Band ${bandDefs.length || 0}，逐格設定 Filter Type / Frequency / Gain / Q`,
         '調整後以 <b>Bypass 切換 A/B</b> 比對，確認頻段變化自然不突兀'
       ]
     });
@@ -1102,28 +1120,40 @@ function buildBgmFx(a) {
     });
   }
   if (fl.maskEq) {
-    const eb = [];
+    const bandDefs = [];
     if (fl.maskLowMid) {
       const cutLM = a.bands.lowMid > 0.45 ? -6 : -3;
-      eb.push(['Band A · Frequency','300–400 Hz','低中頻泥濘區中心（SER 200–500Hz 過高）']);
-      eb.push(['Band A · Gain',`${cutLM} dB`,`SER(200-500Hz) ${(a.bands.lowMid*100).toFixed(1)}% > 35% 門檻，Bell Cut 收斂濁厚`]);
-      eb.push(['Band A · Q','0.7–1.2','寬幅 Bell，避免過度削薄']);
-      eb.push(['Band A · Band Toggle','On','啟用此 Band']);
+      bandDefs.push({
+        type: 'Bell（Cut）', freq: '300–400', gain: cutLM, q: '0.7–1.2', slope: null,
+        reason: `SER(200-500Hz) ${(a.bands.lowMid*100).toFixed(1)}% > 35% 門檻，收斂低中頻泥濘`
+      });
     }
     if (fl.maskMid) {
       const cutMid = a.bands.mid > 0.4 ? -18 : a.bands.mid > 0.3 ? -9 : -3;
-      eb.push(['Band B · Frequency','1250–2500 Hz','人聲核心可懂度頻段中心（SER 1k-3kHz 過高）']);
-      eb.push(['Band B · Gain',`${cutMid} dB`,`SER(1k-3kHz 近似 mid band) ${(a.bands.mid*100).toFixed(1)}% > 25% 門檻，讓出對白清晰度空間`]);
-      eb.push(['Band B · Q','1.2','涵蓋人聲核心可懂度範圍']);
-      eb.push(['Band B · Band Toggle','On','啟用此 Band']);
+      bandDefs.push({
+        type: 'Bell（Cut）', freq: '1250–2500', gain: cutMid, q: '1.2', slope: null,
+        reason: `SER(1k-3kHz 近似) ${(a.bands.mid*100).toFixed(1)}% > 25% 門檻，讓出人聲核心可懂度空間`
+      });
     }
     if (!fl.maskLowMid && !fl.maskMid && a.bands.vocalOverlap > BGM_MASK_TH) {
       const cut = a.bands.vocalOverlap > 0.45 ? -6 : -3.5;
-      eb.push(['Band · Frequency','1500 Hz','人聲可懂度核心頻段中心（寬帶重疊指標）']);
-      eb.push(['Band · Gain',`${cut} dB`,'依 250-4000Hz 寬帶重疊程度決定挖空深度']);
-      eb.push(['Band · Q','1.2','涵蓋 500Hz–3kHz 主要人聲範圍']);
-      eb.push(['Band · Band Toggle','On','啟用此 Band']);
+      bandDefs.push({
+        type: 'Bell（Cut）', freq: '1500', gain: cut, q: '1.2', slope: null,
+        reason: `寬帶重疊(250-4000Hz) ${(a.bands.vocalOverlap*100).toFixed(1)}%，挖空讓出對白清晰度`
+      });
     }
+    const eb = [];
+    if (bandDefs.length > 0) {
+      eb.push(['── 總覽', `共 ${bandDefs.length} 個 Band`, `依序對映 Parametric EQ 的 Band 1 ~ Band ${bandDefs.length}，同軌其餘 Band 保持 Off`]);
+    }
+    bandDefs.forEach((b, i) => {
+      const n = i + 1;
+      eb.push([`Band ${n} · Filter Type`, b.type, b.reason]);
+      eb.push([`Band ${n} · Frequency`, `${b.freq} Hz`, '']);
+      eb.push([`Band ${n} · Gain`, `${b.gain>=0?'+':''}${b.gain} dB`, '']);
+      eb.push([`Band ${n} · Q`, `${b.q}`, 'Q 值越低頻段越寬，越高越窄']);
+      eb.push([`Band ${n} · Toggle`, 'On', `啟用此 Band（面板第 ${n} 格）`]);
+    });
     eb.push(['建議','僅對白段落套用','可用 Clip-based EQ 或關鍵影格自動化 Band Gain']);
     fx.push({
       id:'maskeq', pathLabel:null, name:'Parametric Equalizer（頻譜遮蔽避讓 · SER 分析）',
@@ -1131,7 +1161,7 @@ function buildBgmFx(a) {
       params: eb,
       steps:[
         '效果面板搜尋 <b>Parametric Equalizer</b>，拖曳至 BGM 音軌',
-        '依上表逐一啟用觸發的 Band，設定 Frequency / Gain / Q',
+        `依上表「總覽」列的 Band 數量，依序點開面板 Band 1 ~ Band ${bandDefs.length}，逐格設定 Filter Type / Frequency / Gain / Q`,
         '若僅部分段落有對白，改用 <b>Clip 層級 EQ</b> 避免全曲都被挖空'
       ]
     });
