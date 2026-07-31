@@ -28,6 +28,7 @@ Use this checklist for each implementation cycle.
 - One normal case reviewed
 - One edge case reviewed if feasible
 - Browser/runtime constraint considered
+- If real audio is available, use `docs/audio-spot-check.md` and record whether the advice was directionally useful
 
 ### playback/export
 
