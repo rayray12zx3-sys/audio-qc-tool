@@ -1,0 +1,11 @@
+{
+  "name": "audio-tuning-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "python -m http.server 8123 --bind 127.0.0.1",
+    "smoke:manual": "node scripts/preview-smoke-urls.mjs",
+    "test:report": "node scripts/report-self-test.mjs"
+  }
+}

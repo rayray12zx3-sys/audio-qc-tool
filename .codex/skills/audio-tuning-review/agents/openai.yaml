@@ -1,0 +1,7 @@
+interface:
+  display_name: "Audio Tuning Review"
+  short_description: "Review browser-audio changes for safety and claims."
+  default_prompt: "Use $audio-tuning-review to review browser-audio logic, wording, and static-site risks in this repo."
+
+policy:
+  allow_implicit_invocation: true
