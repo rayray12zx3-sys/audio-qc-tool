@@ -1,0 +1,7 @@
+interface:
+  display_name: "UI Smoke Check"
+  short_description: "Check UI states and responsiveness after each change."
+  default_prompt: "Use $ui-smoke-check to verify UI states, responsive layout, and interaction regressions in this repo."
+
+policy:
+  allow_implicit_invocation: true
