@@ -97,7 +97,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0 0 10px;}
 /* ---- Chain flow ---- */
 .chain-wrap{padding:18px 0 6px;}
 .chain-lbl{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint);font-weight:700;margin-bottom:10px;}
-.chain-flow{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:4px;}
+.chain-flow{display:flex;align-items:center;gap:0;overflow-x:auto;max-width:100%;padding-bottom:4px;}
 .chain-node{
   flex-shrink:0;border:1px solid var(--border);border-radius:6px;padding:6px 11px;
   font-family:var(--mono);font-size:11px;color:var(--text-faint);
@@ -199,7 +199,7 @@ canvas.wf{width:100%;height:64px;display:block;border-radius:3px;}
   display:flex;align-items:center;gap:8px;
 }
 .path-lbl::before,.path-lbl::after{content:"";flex:1;height:1px;background:var(--border-soft);}
-.path-lbl span{color:var(--accent);white-space:nowrap;}
+.path-lbl span{color:var(--accent);white-space:normal;overflow-wrap:anywhere;text-align:center;}
 .fxcard{border:1px solid var(--border);border-radius:8px;background:var(--panel);margin-bottom:12px;overflow:hidden;}
 .fxhead{
   padding:11px 14px;border-bottom:1px solid var(--border);
@@ -258,6 +258,12 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
   cursor:not-allowed;opacity:.5;color:var(--text-dim);border-color:var(--border);
 }
 .actions button:disabled:hover{color:var(--text-dim);border-color:var(--border);}
+@media(max-width:640px){
+  .chain-flow{padding-bottom:8px;}
+  .fxbody{overflow-x:hidden;}
+  table.p{table-layout:fixed;}
+  table.p th,table.p td{overflow-wrap:anywhere;word-break:break-word;}
+}
 </style>
 </head>
 <body>
@@ -269,7 +275,7 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Audio QC · Premiere Pro / Audition</p>
+  <p class="eyebrow">Audio Tuning Guide · Premiere Pro / Audition</p>
   <h1>PR / AU 新手調音建議工具</h1>
   <p class="desc">本工具在瀏覽器本機執行，音訊檔案不會上傳至任何伺服器。上傳人聲或 BGM 後，系統透過
   <b>K-Weighting 近似響度分析</b>與 <b>STFT 1/3 Octave 頻譜分析</b>，估算電平、動態範圍、
@@ -332,9 +338,9 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
   <div class="filebar" id="fb-voice"><span><b id="fn-voice"></b> <span id="fm-voice"></span></span><button class="rl" data-t="fi-voice">重新選擇</button></div>
   <div class="status" id="st-voice"></div>
   <section class="result" id="res-voice">
-    <div class="blk">總結判定</div>
+    <div class="blk">總結建議</div>
     <div class="summary-panel" id="sum-voice"></div>
-    <div class="blk">量測數據</div>
+    <div class="blk">估算數據</div>
     <div class="mgrid" id="mg-voice"></div>
     <div class="blk">波形圖</div>
     <div class="wf-wrap"><canvas class="wf" id="wf-voice"></canvas></div>
@@ -362,9 +368,9 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
   <div class="filebar" id="fb-bgm"><span><b id="fn-bgm"></b> <span id="fm-bgm"></span></span><button class="rl" data-t="fi-bgm">重新選擇</button></div>
   <div class="status" id="st-bgm"></div>
   <section class="result" id="res-bgm">
-    <div class="blk">總結判定</div>
+    <div class="blk">總結建議</div>
     <div class="summary-panel" id="sum-bgm"></div>
-    <div class="blk">量測數據</div>
+    <div class="blk">估算數據</div>
     <div class="mgrid" id="mg-bgm"></div>
     <div class="blk">波形圖</div>
     <div class="wf-wrap"><canvas class="wf" id="wf-bgm"></canvas></div>
@@ -433,8 +439,8 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const avg   = arr => arr.reduce((s, v) => s + v, 0) / arr.length;
 const pctile = (sorted, p) => sorted[Math.max(0, Math.min(sorted.length - 1, Math.floor(sorted.length * p)))];
 
-// ===== K-Weighting 濾波器（動態係數，依 sampleRate 計算）=====
-// ITU-R BS.1770-4 兩階 biquad IIR
+// ===== K-Weighting 近似濾波器（動態係數，依 sampleRate 計算）=====
+// 參考 BS.1770 K-weighting 的兩階 biquad IIR；本工具輸出仍為瀏覽器端估算。
 function kwCoeffs(sr) {
   // Stage 1：High-Shelf pre-filter（補償頭部聲學效應，+4dB @ 1682Hz）
   const f0 = 1681.974450955533;
@@ -484,10 +490,10 @@ function kWeightedRms(mono, sr) {
   return toDb(Math.sqrt(ms / f.length));
 }
 
-// ===== Integrated Loudness（ITU-R BS.1770-4 / EBU R128 雙重閘門）=====
+// ===== Estimated Integrated Loudness（參考 BS.1770 / EBU R128 gate 概念）=====
 // 取代單純全域 K-weighted RMS：靜音段過多的素材（如本工具常見的對白檔案）
-// 若用整段平均 RMS 測量，會被靜音段嚴重拉低、偏離人耳實際感知響度。
-// 官方演算法用 400ms 滑動區塊（75% overlap）+ 兩道閘門，排除靜音與過安靜段落後才取平均。
+// 若用整段平均 RMS 估算，會被靜音段嚴重拉低、偏離人耳實際感知響度。
+// 這裡用 400ms 滑動區塊（75% overlap）+ 兩道閘門近似處理；不是合規 loudness meter。
 function integratedLoudness(mono, sr) {
   const c = kwCoeffs(sr);
   const f = mono.slice();
@@ -504,7 +510,7 @@ function integratedLoudness(mono, sr) {
     return toDb(Math.sqrt(ms / Math.max(f.length, 1)));
   }
 
-  const LUFS_OFFSET = -0.691; // ITU-R BS.1770 標準校正常數
+  const LUFS_OFFSET = -0.691; // BS.1770 常用校正常數；此實作仍為近似估算。
   const blocks = [];
   for (let start = 0; start + blockSize <= f.length; start += hopSize) {
     let ms = 0;
@@ -775,7 +781,7 @@ function diagVoice(a) {
     const safeGain = PLATFORM.targetTp - a.tpDb;
     if (rawGain > safeGain + 0.1) {
       d.push({ title:'Clip Gain 削波風險', lvl:'severe',
-        desc:`欲達 ${PLATFORM.label} 目標需增益 <code>+${rawGain.toFixed(1)} dB</code>，但 Estimated True Peak 為 <code>${a.tpDb.toFixed(1)} dBTP</code>，全額套用將超過 ${PLATFORM.targetTp} dBTP 上限。已自動限制 Clip Gain 於安全增益 <code>+${safeGain.toFixed(1)} dB</code>，剩餘 <code>+${(rawGain-safeGain).toFixed(1)} dB</code> 改由 Compressor MakeUp 承擔。` });
+        desc:`欲達 ${PLATFORM.label} 目標需增益 <code>+${rawGain.toFixed(1)} dB</code>，但 Estimated True Peak 為 <code>${a.tpDb.toFixed(1)} dBTP</code>，全額套用將超過 ${PLATFORM.targetTp} dBTP 參考上限。已自動限制 Clip Gain 於保守建議值 <code>+${safeGain.toFixed(1)} dB</code>，剩餘 <code>+${(rawGain-safeGain).toFixed(1)} dB</code> 改由 Compressor MakeUp 承擔。` });
     }
   }
   if (a.lra > 22) {
@@ -804,7 +810,7 @@ function diagVoice(a) {
   }
   if (a.zcr > 12000) {
     d.push({ title:'零交叉率偏高', lvl:'light',
-      desc:`每秒零交叉次數 <code>${Math.round(a.zcr).toLocaleString()}</code>，高於正常語音範圍（3000–8000/s），可能含有明顯高頻雜訊或電磁干擾。` });
+      desc:`每秒零交叉次數 <code>${Math.round(a.zcr).toLocaleString()}</code>，高於常見語音參考範圍（3000–8000/s），可能含有明顯高頻雜訊或電磁干擾。` });
   }
   if (d.length === 0) d.push({ title:'目前未見明顯風險', lvl:'light', desc:'這份瀏覽器端估算目前未見明顯異常，可依效果鏈做基本收尾，最終仍建議以耳聽與 meter 複核。' });
   return d;
@@ -847,7 +853,7 @@ function voiceFlags(a) {
   // ===== 空氣感三重防禦閘門（數據包 4）=====
   const airC1 = a.noiseFloor <= NOISE_BASE && a.snr > 12.0;                      // 噪底 & SNR
   const airC2 = (a.sfm8k || 1) <= 0.35;                                           // 8-16kHz 頻譜平坦度
-  const airC3 = a.bands.sibilance <= 0.06 && (a.pSib || 0) <= -15.0;            // 齒音安全
+  const airC3 = a.bands.sibilance <= 0.06 && (a.pSib || 0) <= -15.0;            // 齒音條件
   const airShelf = airC1 && airC2 && airC3;
   let airBlock = '';
   if (!airC1) airBlock = '檢測到高頻噪底過高，已阻斷空氣感提升以防底噪放大';
@@ -899,14 +905,14 @@ function getEffectiveTp() {
 }
 function getAirGainMax() { return OUT_FMT === 'lossy' ? 1.0 : 1.5; }
 
-// ===== PR/AU 效果器建議：人聲（Step 0-4 標準線性流程，數據包 6）=====
+// ===== PR/AU 效果器建議：人聲（Step 0-4 建議線性流程，數據包 6）=====
 function buildVoiceFx(a) {
   const tgt = PLATFORM.targetLufs;
   const effTp = getEffectiveTp();
   const delta = tgt - a.kwRms;
   const inRange = Math.abs(a.kwRms - tgt) <= 1;
 
-  // --- 削波保護：Clip Gain 硬上限 = TargetTP − True Peak − 安全餘裕(1dB) ---
+  // --- 削波保護：Clip Gain 建議上限 = TargetTP − Estimated True Peak − 保守餘裕(1dB) ---
   const SAFETY_MARGIN = 1;
   const maxSafeGain = Math.round((effTp - a.tpDb - SAFETY_MARGIN) * 10) / 10;
   const cgValRaw = Math.round(delta * 10) / 10;
@@ -1062,8 +1068,8 @@ function buildVoiceFx(a) {
     if (flags.airShelf) {
       bandDefs.push({
         type: 'High Shelf', freq: 12000, gain: getAirGainMax(), q: null,
-        slope: 'Shelf 標準斜率',
-        reason: `噪底${a.noiseFloor.toFixed(1)}dBFS/SNR${a.snr.toFixed(1)}dB/SFM${(a.sfm8k||0).toFixed(2)}/P_Sib${(a.pSib||0).toFixed(1)}dBFS 三重防禦皆通過` + (OUT_FMT==='lossy' ? '，已依有損壓縮規則從 +1.5dB 收斂至 +1.0dB' : '，安全提升明亮度')
+        slope: 'Shelf 預設斜率',
+        reason: `噪底${a.noiseFloor.toFixed(1)}dBFS/SNR${a.snr.toFixed(1)}dB/SFM${(a.sfm8k||0).toFixed(2)}/P_Sib${(a.pSib||0).toFixed(1)}dBFS 三重防禦皆通過` + (OUT_FMT==='lossy' ? '，已依有損壓縮規則從 +1.5dB 收斂至 +1.0dB' : '，可保守提升明亮度')
       });
     }
 
@@ -1101,12 +1107,12 @@ function buildVoiceFx(a) {
   const lbP1 = 0;
   const lbP2 = clamp(Math.round(delta * 0.35), -30, 30);
   fx.push({
-    id:'limiter', pathLabel:'Step 4 · Hard Limiter（硬壓限 / 最終安全門）',
+    id:'limiter', pathLabel:'Step 4 · Hard Limiter（硬壓限 / 最終保守防線）',
     name:'Hard Limiter',
-    why:`防爆音安全層，Estimated True Peak 參考天花板 ${effTp} dBTP（${PLATFORM.label}${OUT_FMT==='lossy'?' + 有損壓縮餘裕':''}）`,
+    why:`防爆音保守層，Estimated True Peak 參考天花板 ${effTp} dBTP（${PLATFORM.label}${OUT_FMT==='lossy'?' + 有損壓縮餘裕':''}）`,
     params:[
       ['Peak Mode',               'True Peak',             '偵測 Inter-sample 峰值，防止轉檔後隱藏爆音'],
-      ['Input Boost（方案一）',    '0 dB',                  'Clip Gain 已完成增益，Limiter 僅作安全門'],
+      ['Input Boost（方案一）',    '0 dB',                  'Clip Gain 已完成增益，Limiter 僅作保守防線'],
       ['Input Boost（方案二）',    `${lbP2>=0?'+':''}${lbP2} dB`, `承接 Compressor 剩餘的 35% 增益 / ${inRange?'合格勿補':'補足差距'}`],
       ['Maximum Amplitude',       `${effTp} dBTP`,      '硬性天花板，禁止高於此值'],
       ['Look-Ahead Time',         '5 ms',                  '預讀時間，攔截快速瞬態'],
@@ -1393,14 +1399,14 @@ function normalizeFxList(trackId, fx, a) {
   if (trackId === 'voice') {
     if (!has('denoise')) list.splice(1, 0, off('denoise', 'DeNoise', '噪音底床未達降噪門檻'));
     if (!has('deesser')) list.splice(2, 0, off('deesser', 'DeEsser', '齒音未達處理門檻'));
-    if (!has('dynamics')) list.splice(3, 0, off('dynamics', 'Dynamics', '動態與目標差距目前可接受'));
+    if (!has('dynamics')) list.splice(3, 0, off('dynamics', 'Dynamics', '動態與目標差距目前未觸發明顯風險'));
     if (!has('eq')) list.splice(4, 0, off('eq', 'Parametric Equalizer', '頻段未達明顯修正門檻'));
   }
   if (trackId === 'bgm') {
     if (!has('hp')) list.unshift(off('hp', 'Parametric Equalizer（HP 低頻收斂）', '低頻未達收斂門檻'));
     if (!has('maskeq')) list.push(off('maskeq', 'Parametric Equalizer（頻譜遮蔽避讓）', '人聲遮蔽未達處理門檻'));
-    if (!has('stereoexp')) list.push(off('stereoexp', 'Stereo Expander', '聲場寬度目前可接受'));
-    if (!has('bgmdyn')) list.push(off('bgmdyn', 'Dynamics（電平穩定）', 'BGM 動態起伏目前可接受'));
+    if (!has('stereoexp')) list.push(off('stereoexp', 'Stereo Expander', '聲場寬度目前未觸發明顯風險'));
+    if (!has('bgmdyn')) list.push(off('bgmdyn', 'Dynamics（電平穩定）', 'BGM 動態起伏目前未觸發明顯風險'));
   }
   return list;
 }
@@ -1498,10 +1504,10 @@ function renderMetrics(id, a) {
     mc('取樣率 / 聲道', `${a.sr}Hz / ${a.ch}ch`, `時長 ${a.dur.toFixed(1)}s`),
     mc('Estimated Integrated Loudness', `${a.kwRms.toFixed(1)} LUFS`, kwNote(a.kwRms), kwFlag(a.kwRms)),
     mc('Sample Peak', `${a.smpPkDb.toFixed(1)} dBFS`, `削頂樣本 ${a.clipped}`, pf),
-    mc('Estimated True Peak（4x 插值）', `${a.tpDb.toFixed(1)} dBTP`, a.tpDb > effTp ? `⚠ 超過 ${effTp} dBTP` : '接近參考範圍', pf),
+    mc('Estimated True Peak（4x 插值）', `${a.tpDb.toFixed(1)} dBTP`, a.tpDb > effTp ? `⚠ 超過 ${effTp} dBTP` : '未超過參考上限', pf),
     mc('噪音底床', `${a.noiseFloor.toFixed(1)} dBFS`, `基準 ${NOISE_BASE} dBFS`),
     mc('SNR 訊噪比', `${a.snr.toFixed(1)} dB`, a.snr < 20 ? '偏低，建議降噪' : '目前未見明顯風險', a.snr<20?'fw':'fg'),
-    mc('動態範圍（Crest）', `${a.crest.toFixed(1)} dB`, a.crest>18?'偏大，建議壓縮':'目前可接受', a.crest>18?'fw':'fg'),
+    mc('動態範圍（Crest）', `${a.crest.toFixed(1)} dB`, a.crest>18?'偏大，建議壓縮':'未觸發壓縮風險', a.crest>18?'fw':'fg'),
     mc('RMS Range（LRA-like）', `${a.lra.toFixed(1)} dB`, '50ms RMS 95th–10th percentile 差值'),
     mc('DC Offset', a.dcOffset.toFixed(4), Math.abs(a.dcOffset)>0.02?'建議校正':'目前未見異常', Math.abs(a.dcOffset)>0.02?'fw':'fg'),
     mc('靜音段比例', `${(a.silentRatio*100).toFixed(1)}%`, '靜音幀 / 總幀數'),
@@ -1509,7 +1515,7 @@ function renderMetrics(id, a) {
     mc('頻譜平坦度 SFM(8-16k)', (a.sfm8k||0).toFixed(2), a.sfm8k<=0.35?'諧波結構，空氣感候選':'偏白噪，阻斷空氣感', a.sfm8k<=0.35?'fg':'fw'),
     mc('齒音瞬態峰值 P_Sib', `${(a.pSib||0).toFixed(1)} dBFS`, a.pSib<=-15?'供調音起點參考':'⚠ 過高，阻斷空氣感', a.pSib<=-15?'fg':'fw'),
   ].join('') + (a.stereo ? [
-    mc('立體聲相關係數', a.stereo.corr.toFixed(2), a.stereo.corr<0?'⚠ 相位可能抵消':'目前可接受', a.stereo.corr<0?'fb':'fg'),
+    mc('立體聲相關係數', a.stereo.corr.toFixed(2), a.stereo.corr<0?'⚠ 相位可能抵消':'未觸發相位風險', a.stereo.corr<0?'fb':'fg'),
     mc('聲像寬度指標', a.stereo.width.toFixed(2), '0=重疊 1=極寬')
   ].join('') : '');
 }
@@ -1962,12 +1968,12 @@ function updateCopyButtonState() {
 function buildReport() {
   const r = buildReportData();
   let t = `${r.meta.title}\n產生時間：${r.meta.generatedAt}\n目標平台：${r.meta.platform}\nReference Target：${r.meta.targetLufs} / ${r.meta.peakCeiling}\n輸出格式：${r.meta.outputFormat}\n${'='.repeat(44)}\n\n`;
-  t += `[總結判定]\n整體狀態：${r.summary.status}\n主要問題：${r.summary.mainIssues.join('；') || '尚未發現明顯問題'}\n優先處理順序：${r.summary.priority}\n\n`;
+  t += `[總結建議]\n整體狀態：${r.summary.status}\n主要問題：${r.summary.mainIssues.join('；') || '尚未發現明顯問題'}\n優先處理順序：${r.summary.priority}\n\n`;
   r.tracks.forEach(track => {
     t += `[${track.label}] ${track.ready ? track.filename : '尚未上傳'}\n${'-'.repeat(36)}\n`;
     if (!track.ready) { t += '尚未上傳分析\n\n'; return; }
     t += `狀態：${track.status}\n`;
-    t += `量測摘要：\n`;
+    t += `估算摘要：\n`;
     track.measurements.forEach(m => t += `- ${m.kind}｜${m.name}: ${m.value}\n`);
     t += `問題摘要：\n`;
     track.issues.forEach(i => t += `- ${i}\n`);

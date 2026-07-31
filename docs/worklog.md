@@ -4,6 +4,14 @@ Compact record of project iterations. Keep entries factual and short.
 
 ## 2026-07-31
 
+### Analysis wording and heuristic framing pass
+
+- Type: `audio logic`, `UI-only`
+- Files: `index.html`
+- Completed: Reframed remaining QC, measurement, standard, and safety wording toward browser-side estimates and beginner tuning suggestions; fixed mobile preview overflow from chain/path/table content.
+- Verification: PowerShell smoke URL helper, PowerShell parser checks, `git diff --check`, report self-test through Codex Node REPL, localhost UI smoke on desktop and `390x844`, and GitHub Pages basic load check.
+- Risk: Audio measurements remain heuristic estimates and still need real audio spot checks before expanding analysis claims.
+
 ### Repo-local Codex workflow setup
 
 - Type: `refactor`
