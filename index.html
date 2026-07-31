@@ -407,6 +407,7 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 // ===== 常數 =====
 const NOISE_BASE  = -60;
 const CLIP_AMP    = Math.pow(10, -0.3 / 20);
+const PEAK_SAFETY_MARGIN_DB = 1;
 const BGM_MASK_TH = 0.32;
 
 // ===== 平台響度規範 Presets（數據包 1）=====
@@ -778,10 +779,11 @@ function diagVoice(a) {
   }
   {
     const rawGain = PLATFORM.targetLufs - a.kwRms;
-    const safeGain = PLATFORM.targetTp - a.tpDb;
+    const effTp = getEffectiveTp();
+    const safeGain = Math.round((effTp - a.tpDb - PEAK_SAFETY_MARGIN_DB) * 10) / 10;
     if (rawGain > safeGain + 0.1) {
       d.push({ title:'Clip Gain 削波風險', lvl:'severe',
-        desc:`欲達 ${PLATFORM.label} 目標需增益 <code>+${rawGain.toFixed(1)} dB</code>，但 Estimated True Peak 為 <code>${a.tpDb.toFixed(1)} dBTP</code>，全額套用將超過 ${PLATFORM.targetTp} dBTP 參考上限。已自動限制 Clip Gain 於保守建議值 <code>+${safeGain.toFixed(1)} dB</code>，剩餘 <code>+${(rawGain-safeGain).toFixed(1)} dB</code> 改由 Compressor MakeUp 承擔。` });
+        desc:`欲達 ${PLATFORM.label} 目標需增益 <code>+${rawGain.toFixed(1)} dB</code>，但 Estimated True Peak 為 <code>${a.tpDb.toFixed(1)} dBTP</code>，全額套用將超過 ${effTp} dBTP 參考上限。已依 <code>${PEAK_SAFETY_MARGIN_DB} dB</code> 保守餘裕限制 Clip Gain 於建議值 <code>${safeGain>=0?'+':''}${safeGain.toFixed(1)} dB</code>，剩餘 <code>+${(rawGain-safeGain).toFixed(1)} dB</code> 改由 Compressor MakeUp 承擔。` });
     }
   }
   if (a.lra > 22) {
@@ -913,8 +915,7 @@ function buildVoiceFx(a) {
   const inRange = Math.abs(a.kwRms - tgt) <= 1;
 
   // --- 削波保護：Clip Gain 建議上限 = TargetTP − Estimated True Peak − 保守餘裕(1dB) ---
-  const SAFETY_MARGIN = 1;
-  const maxSafeGain = Math.round((effTp - a.tpDb - SAFETY_MARGIN) * 10) / 10;
+  const maxSafeGain = Math.round((effTp - a.tpDb - PEAK_SAFETY_MARGIN_DB) * 10) / 10;
   const cgValRaw = Math.round(delta * 10) / 10;
   const cgVal = cgValRaw > maxSafeGain ? maxSafeGain : cgValRaw;
   const gainCapped = cgValRaw > maxSafeGain + 0.05;
@@ -943,7 +944,7 @@ function buildVoiceFx(a) {
         : '確認後進入效果鏈，Compressor MakeUp 與 Limiter Input Boost 均設 0（避免雙重疊加）'
     ],
     note: (gainCapped
-      ? `⚠️ <b>削波保護已啟動</b>：Clip Gain 上限 = (${effTp}dBTP − Estimated True Peak ${a.tpDb.toFixed(1)}dBTP − 餘裕${SAFETY_MARGIN}dB) = <b>${cgVal>=0?'+':''}${cgVal} dB</b>。剩餘 <b>${residual>=0?'+':''}${residual} dB</b> 已改由 <b>Compressor MakeUp</b> 承擔。`
+      ? `⚠️ <b>削波保護已啟動</b>：Clip Gain 上限 = (${effTp}dBTP − Estimated True Peak ${a.tpDb.toFixed(1)}dBTP − 餘裕${PEAK_SAFETY_MARGIN_DB}dB) = <b>${cgVal>=0?'+':''}${cgVal} dB</b>。剩餘 <b>${residual>=0?'+':''}${residual} dB</b> 已改由 <b>Compressor MakeUp</b> 承擔。`
       : `採用此步驟後，以下 Dynamics 的 <b>MakeUp 設 0 dB</b>、Limiter 的 <b>Input Boost 設 0 dB</b>，防止雙重增益爆音。`)
       + ` ⚠️ 請勿另外執行 PR/AU 的「Auto-Match（自動匹配）響度」——該功能目標值由 Adobe 內部演算法決定、與本工具計算基準不同，疊加會使最終響度偏離 ${tgt} LUFS 目標。此 Clip Gain 數值是建議設定，匯出前仍需複核。`
   });

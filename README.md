@@ -46,6 +46,8 @@ npm run test:report
 
 詳細 UI 檢查步驟見 `docs/preview-smoke-check.md`。
 
+真實音檔抽查流程見 `docs/audio-spot-check.md`。
+
 迭代紀錄見 `docs/worklog.md`。
 
 ## 部署與攜帶
