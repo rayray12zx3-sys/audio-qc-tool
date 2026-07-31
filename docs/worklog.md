@@ -4,6 +4,14 @@ Compact record of project iterations. Keep entries factual and short.
 
 ## 2026-07-31
 
+### Real audio spot check workflow
+
+- Type: `audio logic`, `refactor`
+- Files: `docs/audio-spot-check.md`, `README.md`, `docs/iteration-checklist.md`, `.gitignore`, `index.html`
+- Completed: Added a real-audio spot check workflow, ignored local private audio media, and aligned Clip Gain risk wording with the same 1 dB peak safety margin used by effect recommendations.
+- Verification: Two full mono voice WAV files and one 5-minute excerpt from a large stereo WAV were analyzed with the current browser-analysis functions.
+- Risk: The large stereo WAV was not analyzed end-to-end because hour-long uncompressed files remain a browser memory/performance risk.
+
 ### Analysis wording and heuristic framing pass
 
 - Type: `audio logic`, `UI-only`
