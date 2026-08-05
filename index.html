@@ -406,7 +406,7 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 <script>
 // ===== 常數 =====
 const NOISE_BASE  = -60;
-const CLIP_AMP    = Math.pow(10, -0.3 / 20);
+const NEAR_FULL_SCALE_AMP = Math.pow(10, -0.3 / 20);
 const PEAK_SAFETY_MARGIN_DB = 1;
 const BGM_MASK_TH = 0.32;
 
@@ -433,6 +433,8 @@ let PLATFORM  = PLATFORM_PRESETS.youtube;
 let OUT_FMT   = 'wav';   // 'wav' | 'lossy'
 let DUCK_TYPE = 'vlog';  // 'vlog' | 'podcast'
 const S = { voice: null, bgm: null };
+const analysisRuns = { voice: 0, bgm: 0 };
+let activeAnalysisCount = 0;
 
 // ===== 工具函式 =====
 const toDb  = a => 20 * Math.log10(Math.max(a, 1e-12));
@@ -643,11 +645,11 @@ function analyzeAudio(buf) {
     for (let i = 0; i < len; i++) mono[i] += d[i] / ch;
   }
   // Peak / Clipping / DC Offset
-  let smpPk = 0, clipped = 0, dcSum = 0;
+  let smpPk = 0, nearPeakCount = 0, dcSum = 0;
   for (let i = 0; i < len; i++) {
     const a = Math.abs(mono[i]);
     if (a > smpPk) smpPk = a;
-    if (a >= CLIP_AMP) clipped++;
+    if (a >= NEAR_FULL_SCALE_AMP) nearPeakCount++;
     dcSum += mono[i];
   }
   const smpPkDb = toDb(smpPk);
@@ -725,7 +727,7 @@ function analyzeAudio(buf) {
   return {
     sr, ch, dur: buf.duration,
     smpPkDb, tpDb, kwRms, noiseFloor, actRms, overallRms,
-    snr, crest, lra, clipped, dcOffset, silentRatio, zcr,
+    snr, crest, lra, nearPeakCount, dcOffset, silentRatio, zcr,
     stereo, bands, specRatio, pSib, sfm8k
   };
 }
@@ -734,8 +736,8 @@ function analyzeAudio(buf) {
 function diagCommon(a) {
   const d = [];
   if (a.smpPkDb >= -0.3) {
-    d.push({ title:'數位失真（Clipping）', lvl:'severe',
-      desc:`Sample Peak <code>${a.smpPkDb.toFixed(1)} dBFS</code> / Estimated True Peak <code>${a.tpDb.toFixed(1)} dBTP</code>，偵測到 <code>${a.clipped}</code> 個削頂樣本，屬不可逆失真。` });
+    d.push({ title:'接近滿刻度（削波風險）', lvl:'mid',
+      desc:`Sample Peak <code>${a.smpPkDb.toFixed(1)} dBFS</code> / Estimated True Peak <code>${a.tpDb.toFixed(1)} dBTP</code>，偵測到 <code>${a.nearPeakCount}</code> 個接近滿刻度樣本。這是瀏覽器端近似的削波風險指標，不能單獨證明已發生不可逆失真；請以波形、耳聽與專業 meter 複核。` });
   } else if (a.tpDb > -1.0) {
     d.push({ title:'Estimated True Peak 過高（Inter-sample 爆音風險）', lvl:'mid',
       desc:`Estimated True Peak <code>${a.tpDb.toFixed(1)} dBTP</code> 超過 −1.0 dBTP 參考線，轉檔或播放時可能有爆音風險，建議 Hard Limiter 限幅並用專業 meter 複核。` });
@@ -1504,7 +1506,7 @@ function renderMetrics(id, a) {
   el.innerHTML = [
     mc('取樣率 / 聲道', `${a.sr}Hz / ${a.ch}ch`, `時長 ${a.dur.toFixed(1)}s`),
     mc('Estimated Integrated Loudness', `${a.kwRms.toFixed(1)} LUFS`, kwNote(a.kwRms), kwFlag(a.kwRms)),
-    mc('Sample Peak', `${a.smpPkDb.toFixed(1)} dBFS`, `削頂樣本 ${a.clipped}`, pf),
+    mc('Sample Peak', `${a.smpPkDb.toFixed(1)} dBFS`, `接近滿刻度樣本 ${a.nearPeakCount}`, pf),
     mc('Estimated True Peak（4x 插值）', `${a.tpDb.toFixed(1)} dBTP`, a.tpDb > effTp ? `⚠ 超過 ${effTp} dBTP` : '未超過參考上限', pf),
     mc('噪音底床', `${a.noiseFloor.toFixed(1)} dBFS`, `基準 ${NOISE_BASE} dBFS`),
     mc('SNR 訊噪比', `${a.snr.toFixed(1)} dB`, a.snr < 20 ? '偏低，建議降噪' : '目前未見明顯風險', a.snr<20?'fw':'fg'),
@@ -1521,7 +1523,7 @@ function renderMetrics(id, a) {
   ].join('') : '');
 }
 
-// ===== 渲染：Canvas 波形（降取樣 + 削頂標紅）=====
+// ===== 渲染：Canvas 波形（降取樣 + 接近滿刻度標橙）=====
 function renderWaveform(canvasId, buf) {
   const ch = buf.numberOfChannels, len = buf.length;
   const mono = new Float32Array(len);
@@ -1543,14 +1545,14 @@ function renderWaveform(canvasId, buf) {
   const mid = 32;
   for (let px = 0; px < w; px++) {
     const s0 = px * spp, s1 = Math.min(s0 + spp, len);
-    let minS = 0, maxS = 0, clip = false;
+    let minS = 0, maxS = 0, nearPeak = false;
     for (let i = s0; i < s1; i++) {
       const v = mono[i];
       if (v < minS) minS = v;
       if (v > maxS) maxS = v;
-      if (Math.abs(v) >= CLIP_AMP) clip = true;
+      if (Math.abs(v) >= NEAR_FULL_SCALE_AMP) nearPeak = true;
     }
-    ctx.fillStyle = clip ? 'rgba(255,92,92,.9)' : 'rgba(94,201,163,.65)';
+    ctx.fillStyle = nearPeak ? 'rgba(255,178,56,.9)' : 'rgba(94,201,163,.65)';
     const yT = mid - maxS * mid, yB = mid - minS * mid;
     ctx.fillRect(px, yT, 1, Math.max(1, yB - yT));
   }
@@ -1712,6 +1714,31 @@ function showLoad(msg) {
 }
 function hideLoad() { document.getElementById('loadingOverlay').classList.remove('show'); }
 
+function beginAnalysisRun(trackId) {
+  const runId = ++analysisRuns[trackId];
+  activeAnalysisCount++;
+  showLoad('智慧調音分析中，請勿關閉網頁…');
+  return runId;
+}
+
+function isCurrentAnalysisRun(trackId, runId) {
+  return analysisRuns[trackId] === runId;
+}
+
+function finishAnalysisRun() {
+  activeAnalysisCount = Math.max(0, activeAnalysisCount - 1);
+  if (activeAnalysisCount === 0) hideLoad();
+}
+
+function clearTrackState(trackId) {
+  S[trackId] = null;
+  document.getElementById('res-' + trackId).classList.remove('show');
+  document.querySelector(`.tab[data-track="${trackId}"]`).classList.remove('done');
+  renderChain('chain-' + trackId, {}, trackId);
+  updateMix();
+  updateCopyButtonState();
+}
+
 // ===== 檔案處理 =====
 function initTrack(tid) {
   const drop = document.getElementById('drop-' + tid);
@@ -1742,30 +1769,34 @@ function activateTrack(trackId) {
 async function handleFile(tid, file) {
   const fb  = document.getElementById('fb-' + tid);
   const stEl = document.getElementById('st-' + tid);
-  const res  = document.getElementById('res-' + tid);
   const setSt = msg => { stEl.textContent = msg; stEl.classList.toggle('show', !!msg); };
 
+  const runId = beginAnalysisRun(tid);
+  clearTrackState(tid);
+  setSt('');
   fb.classList.add('show');
   document.getElementById('fn-' + tid).textContent = file.name;
   document.getElementById('fm-' + tid).textContent = `(${(file.size/1024/1024).toFixed(2)} MB)`;
-  res.classList.remove('show');
-
-  showLoad('智慧調音分析中，請勿關閉網頁…');
-  // 雙 rAF：確保 Overlay 渲染完成再開始計算
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   try {
+    // 雙 rAF：確保 Overlay 渲染完成再開始計算。
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    if (!isCurrentAnalysisRun(tid, runId)) return;
     aCtx = aCtx || new (window.AudioContext || window.webkitAudioContext)();
     setSt('解碼音訊中…');
     const ab = await file.arrayBuffer();
+    if (!isCurrentAnalysisRun(tid, runId)) return;
     const buf = await aCtx.decodeAudioData(ab);
+    if (!isCurrentAnalysisRun(tid, runId)) return;
     setSt('');
     const a = analyzeAudio(buf);
     render(tid, a, file.name, buf);
   } catch (err) {
-    setSt('解碼失敗：' + err.message + '（請確認瀏覽器支援此格式）');
+    if (isCurrentAnalysisRun(tid, runId)) {
+      setSt('解碼失敗：' + err.message + '（請確認瀏覽器支援此格式）');
+    }
   } finally {
-    hideLoad();
+    finishAnalysisRun();
   }
 }
 
@@ -1828,7 +1859,7 @@ document.getElementById('cTp').addEventListener('input', e => {
 function makeTestAnalysis(overrides = {}) {
   return {
     sr:48000, ch:2, dur:30, smpPkDb:-6, tpDb:-5.5, kwRms:-19, noiseFloor:-62,
-    actRms:-18, overallRms:-25, snr:44, crest:13, lra:8, clipped:0, dcOffset:0.001,
+    actRms:-18, overallRms:-25, snr:44, crest:13, lra:8, nearPeakCount:0, dcOffset:0.001,
     silentRatio:0.08, zcr:4200, stereo:{corr:0.6,width:0.4},
     bands:{rumble:0.03,bass:0.16,lowMid:0.12,mid:0.18,presence:0.06,sibilance:0.03,hiss:0.02,vocalOverlap:0.22,pkRumble:63,pkMuddy:315,pkPresence:2500,pkSibilance:6300},
     specRatio:new Array(T3.length).fill(1/T3.length), pSib:-22, sfm8k:0.25,
@@ -2000,14 +2031,38 @@ function buildReport() {
   t += `\n附註：Estimated 類數值為瀏覽器端近似分析，Reference Target 為目標值，Suggested Setting 為 PR/AU 調音起點；最終發布請以耳聽與專業 loudness meter 複核。\n`;
   return t;
 }
-document.getElementById('copyBtn').addEventListener('click', () => {
+const copyButtonIdleHtml = document.getElementById('copyBtn').innerHTML;
+let copyFeedbackTimer;
+function showCopyButtonFeedback(message, title, duration = 1500) {
+  const btn = document.getElementById('copyBtn');
+  clearTimeout(copyFeedbackTimer);
+  btn.textContent = message;
+  btn.title = title;
+  if (!duration) return;
+  copyFeedbackTimer = setTimeout(() => {
+    btn.innerHTML = copyButtonIdleHtml;
+    updateCopyButtonState();
+  }, duration);
+}
+
+function writeToClipboard(text) {
+  if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+    return Promise.reject(new Error('Clipboard API unavailable'));
+  }
+  return navigator.clipboard.writeText(text);
+}
+
+async function copyReport(writeText = writeToClipboard, feedbackDuration = 1500) {
   if (!hasAnyAnalyzedTrack()) return;
-  navigator.clipboard.writeText(buildReport()).then(() => {
-    const btn = document.getElementById('copyBtn');
-    const orig = btn.innerHTML;
-    btn.textContent = '已複製';
-    setTimeout(() => btn.innerHTML = orig, 1500);
-  });
+  try {
+    await writeText(buildReport());
+    showCopyButtonFeedback('已複製', '完整分析報告已複製到剪貼簿', feedbackDuration);
+  } catch {
+    showCopyButtonFeedback('複製失敗', '瀏覽器無法存取剪貼簿，請確認 HTTPS 或 localhost 權限後重試', feedbackDuration);
+  }
+}
+document.getElementById('copyBtn').addEventListener('click', () => {
+  void copyReport();
 });
 
 // 初始設定 accent-track（預設人聲 tab 啟動）

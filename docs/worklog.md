@@ -2,7 +2,45 @@
 
 Compact record of project iterations. Keep entries factual and short.
 
+## 2026-08-05
+
+### Interaction race regression coverage and copy feedback hardening
+
+- Type: `UI-only`, `audio logic`
+- Files: `index.html`, `scripts/report-self-test.mjs`, `docs/worklog.md`, `TASK_STATE.md`
+- Completed: Preserved a fixed idle template for the report-copy button so rapid feedback cannot lose its SVG or label; expanded the VM interaction self-test to drive stale successful and failed `handleFile()` runs instead of checking run-token helpers alone.
+- Verification: `git diff --check` and the report self-test passed with `interaction: "passed"`. Localhost browser checks covered desktop and `390x844` empty, voice, BGM, both, error, and loading states; rapid copy feedback; one private local WAV success; invalid replacement cleanup; and no browser console errors or page-level horizontal overflow.
+- Risk: Browser file-chooser latency prevented a fresh two-file overlap in this run, so parallel loading relies on the direct automated test plus the 2026-08-04 browser record. Replaced decode work is still not cancelled, and human listening remains pending.
+
+## 2026-08-04
+
+### Concurrent analysis state hardening
+
+- Type: `UI-only`, `audio logic`
+- Files: `index.html`, `scripts/report-self-test.mjs`, `docs/worklog.md`
+- Completed: Added per-track analysis run tokens so only the newest selection may render its result or error, and a shared active-analysis count so the loading overlay stays until all active tracks finish.
+- Verification: Report self-test covers stale same-track tokens and parallel loading; localhost browser checks covered a successful real WAV upload, copy feedback, failed replacement cleanup, two overlapping local WAV analyses, desktop previews, and `390x844` mobile loading/error/both previews with no horizontal overflow.
+- Risk: Replaced analyses are ignored at render time but are not cancelled, so stale browser decode work can still consume CPU and memory. Human listening and any threshold change remain pending.
+
+## 2026-08-03
+
+### Upload-state and peak-warning hardening
+
+- Type: `audio logic`, `UI-only`
+- Files: `index.html`, `scripts/report-self-test.mjs`, `docs/worklog.md`
+- Completed: Clear stale track, mix, badge, and report-copy state before replacement analysis; reframe near-full-scale samples as a clipping-risk indicator; add visible clipboard failure feedback.
+- Verification: Expanded report self-test covers near-full-scale wording, stale-state clearing, and clipboard failure feedback; localhost browser checks covered two real WAV uploads, copy feedback, failed replacement, desktop preview states, and `390x844` mobile `?preview=both`.
+- Risk: Human listening remains pending, so no noise, dynamics, or EQ threshold was changed.
+
 ## 2026-07-31
+
+### Real audio report extraction
+
+- Type: `audio logic`
+- Files: `docs/audio-spot-check-results.md`, `docs/worklog.md`
+- Completed: Recorded current tool output for two local mono voice WAV files without committing private audio; both samples showed low estimated loudness, raised noise floor, wide dynamics, and Clip Gain safety-cap behavior.
+- Verification: Local static server loaded at `http://127.0.0.1:8123/`; the current `index.html` analysis/report functions were run against both WAV files.
+- Risk: Human listening was not performed by Codex, so threshold changes remain blocked until audible match/miss/overreaction is confirmed.
 
 ### Real audio spot check workflow
 
