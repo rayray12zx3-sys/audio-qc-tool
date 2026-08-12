@@ -8,7 +8,7 @@
 
 - 維持瀏覽器端、可部署至 GitHub Pages 的 PR / AU 新手調音建議工具。
 - 正式支援環境改為 PC／桌面瀏覽器；手機僅維持基本可開啟，不列入必要驗收。
-- `agent/split-static-modules` 分支包含 `v0.3.1` 行為不變的靜態檔案拆分候選內容。
+- `main` 已發布 `v0.3.1`；正式 GitHub Pages 使用行為不變的外部靜態檔案結構。
 - 音訊判斷維持 `estimated`、`heuristic`、`suggested`、`starting point` 定位，不宣稱為標準級 QC 或取代人工聆聽。
 
 ## 已確認現況
@@ -37,25 +37,25 @@
 | `scripts/report-self-test.mjs`、`tests/` | 外部 classic script、整合量測與 `file://` 直接開啟回歸 |
 | `package.json`、`package-lock.json`、`README.md`、`docs/` | `0.3.1` 版本、結構說明與交接 |
 
-目前分支：`agent/split-static-modules`，目標分支為 `main`；實際 commit 與 PR 狀態以 Git 為準。
+正式基準分支：`main`；`v0.3.1` 已由 PR #7 squash merge，合併 commit 為 `9b83fe3`。
 
 ## 驗證狀態
 
 - 2026-08-13 `node --check` 通過兩個 classic scripts；`npm run test:report`、`npm run test:dsp` 與 `git diff --check` 通過。report test 保留 True Peak 限制 Clip Gain 的跨檔整合斷言。
 - Playwright Chromium E2E 三項通過：桌面狀態／鍵盤、合成 WAV upload／拒絕流程，以及 `file://` 直接開啟與 `window.AudioAnalysis` namespace。
 - localhost in-app browser 於 `1440x900`、`1024x768` 複核 external CSS/scripts、empty、both、error、loading、large-file 與水平溢位；console 無 error/warn。
-- GitHub Actions CI 需在分支推送後確認；目前尚未取得遠端結果。
+- GitHub Actions `Verify` 已在 PR #7 通過；正式 GitHub Pages 已顯示 `v0.3.1`，並正確載入 `styles.css`、`audio-analysis.js`、`app.js`，console 無訊息。
 
 ## 下一步
 
-1. 提交並推送 v0.3.1，建立 PR，確認 GitHub Actions 與正式 Pages 後合併。
-2. 由使用者對真實樣本完成人工聆聽，標記工具建議的 matched、missed、overreacted，再決定是否調整門檻。
+1. 由使用者對真實樣本完成人工聆聽，標記工具建議的 matched、missed、overreacted，再決定是否調整門檻。
+2. 只有在未來確定要完整分析長檔時，再另案評估 PCM WAV parser、Worker、分批處理與取消機制。
 
 ## 風險與限制
 
 - 被較新選取取代的分析只會停止渲染，不會中止已開始的 decode/analysis，仍可能消耗 CPU 與記憶體。
 - 瀏覽器端量測仍是近似分析；數值與規則不能取代實際聆聽驗證。
-- `v0.3.1` 在合併前仍是候選內容，正式站目前尚未更新。
+- `v0.3.1` 的三個相對路徑資產必須與 `index.html` 一起複製或部署；缺少任一檔案都會使正式頁面失效。
 - 部分格式或瀏覽器可能無法快速提供 metadata；此批選擇安全拒絕而非解碼原始大檔，使用者需改輸出代表片段。
 - mono downmix 對反相或複雜多聲道素材可能抵消頻段與噪音能量；工具已標示低信心，但不能取代逐聲道頻譜與專業 meter 複核。
 - 手機不再是正式支援環境，未執行本批手機版 smoke check。
