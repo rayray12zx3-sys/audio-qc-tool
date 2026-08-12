@@ -5,13 +5,15 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const indexPath = path.join(rootDir, 'index.html');
+const audioAnalysisPath = path.join(rootDir, 'audio-analysis.js');
+const appPath = path.join(rootDir, 'app.js');
 const packagePath = path.join(rootDir, 'package.json');
 const html = fs.readFileSync(indexPath, 'utf8');
 const packageData = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-const match = html.match(/<script>\s*([\s\S]*?)<\/script>/i);
-
-if (!match) {
-  console.error('No inline script found in index.html');
+const audioScriptIndex = html.indexOf('src="audio-analysis.js"');
+const appScriptIndex = html.indexOf('src="app.js"');
+if (!html.includes('href="styles.css"') || audioScriptIndex < 0 || appScriptIndex < 0 || audioScriptIndex > appScriptIndex) {
+  console.error('External classic scripts are not referenced by index.html');
   process.exit(1);
 }
 
@@ -173,7 +175,8 @@ const copyButtonIdleHtml = '<svg aria-hidden="true"></svg><span>複製完整報�
 getElement('copyBtn').innerHTML = copyButtonIdleHtml;
 
 try {
-  vm.runInContext(`${match[1]}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, inspectAudioFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: indexPath });
+  vm.runInContext(fs.readFileSync(audioAnalysisPath, 'utf8'), context, { filename: audioAnalysisPath });
+  vm.runInContext(`${fs.readFileSync(appPath, 'utf8')}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, buildVoiceFx, makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, inspectAudioFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: appPath });
   const result = context.window.runReportSelfTest?.();
   const appTest = context.__appTest;
 
@@ -233,6 +236,11 @@ try {
   const nearPeakDiag = appTest.diagCommon(testAnalysis).find(item => item.title === '接近滿刻度（削波風險）');
   if (!nearPeakDiag || nearPeakDiag.desc.includes('屬不可逆失真') || !nearPeakDiag.desc.includes('接近滿刻度樣本')) {
     interactionFailures.push('near-full-scale warning wording is incorrect');
+  }
+  const gainAnalysis = appTest.makeTestAnalysis({ tpDb: -0.2, kwRms: -30, smpPkDb: -0.2 });
+  const clipGain = appTest.buildVoiceFx(gainAnalysis).find(effect => effect.id === 'clipgain');
+  if (!clipGain?.note?.includes('削波保護已啟動')) {
+    interactionFailures.push('channel-safe true peak did not limit Clip Gain guidance');
   }
 
   const testBuffer = {
