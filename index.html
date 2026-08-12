@@ -10,6 +10,7 @@
   --border:#2a2e37; --border-soft:#1e2128;
   --text:#e8eaed; --text-dim:#8b92a3; --text-faint:#4e5568;
   --accent:#ffb238; --voice:#5ec9a3; --bgm:#7aa2ff;
+  --card:#20242c;
   --good:#5ec9a3; --warn:#ffb238; --bad:#ff5c5c;
   --accent-track:#5ec9a3;
   --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
@@ -123,6 +124,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0;}
   background:var(--panel);margin-top:18px;
 }
 .drop.drag{border-color:var(--accent-track);background:var(--panel-2);}
+.drop:focus-visible,.tab:focus-visible,.rl:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 .drop .di{margin-bottom:10px;opacity:.5;}
 .drop .di svg{width:26px;height:26px;}
 .drop .dt{font-size:14px;font-weight:600;}
@@ -274,7 +276,7 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 </head>
 <body>
 
-<div id="loadingOverlay">
+<div id="loadingOverlay" role="status" aria-live="assertive" aria-busy="false">
   <div class="ld-ring"></div>
   <div class="ld-msg" id="ldMsg">智慧調音分析中，請勿關閉網頁…</div>
 </div>
@@ -296,12 +298,12 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 <!-- 目標發布平台 & 格式選擇 -->
 <div class="trange">
   <div class="trange-row" style="flex-wrap:wrap;gap:10px;">
-    <div class="trange-lbl">目標發布平台</div>
+    <div class="trange-lbl">常用響度起始目標</div>
     <select id="platformSel" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;">
-      <option value="youtube" selected>YouTube / Spotify（−14 LUFS / −1.0 dBTP）</option>
-      <option value="podcast">Apple Podcasts（−16 LUFS / −1.0 dBTP）</option>
-      <option value="social">TikTok / IG Reels（−11 LUFS / −1.0 dBTP）</option>
-      <option value="broadcast">廣播影視 / Netflix（−23 LUFS / −2.0 dBTP）</option>
+      <option value="youtube" selected>Online / Streaming（−14 LUFS / −1.0 dBTP）</option>
+      <option value="podcast">Spoken / Podcast（−16 LUFS / −1.0 dBTP）</option>
+      <option value="social">Short-form（−11 LUFS / −1.0 dBTP）</option>
+      <option value="broadcast">Broadcast-style reference（−23 LUFS / −2.0 dBTP）</option>
       <option value="custom">自訂</option>
     </select>
     <div class="trange-lbl" style="margin-left:8px;">預期輸出格式</div>
@@ -327,25 +329,25 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 </div>
 
 <!-- Tabs -->
-<div class="tabs">
-  <button class="tab active" data-track="voice"><span class="dot"></span>人聲 Voice<span class="badge" id="badge-voice">已分析</span></button>
-  <button class="tab" data-track="bgm"><span class="dot"></span>BGM 配樂<span class="badge" id="badge-bgm">已分析</span></button>
+<div class="tabs" role="tablist" aria-label="分析軌道">
+  <button class="tab active" data-track="voice" role="tab" id="tab-voice" aria-selected="true" aria-controls="panel-voice" tabindex="0"><span class="dot"></span>人聲 Voice<span class="badge" id="badge-voice">已分析</span></button>
+  <button class="tab" data-track="bgm" role="tab" id="tab-bgm" aria-selected="false" aria-controls="panel-bgm" tabindex="-1"><span class="dot"></span>BGM 配樂<span class="badge" id="badge-bgm">已分析</span></button>
 </div>
 
 <!-- 人聲面板 -->
-<div class="panel active" id="panel-voice" data-track="voice">
+<div class="panel active" id="panel-voice" data-track="voice" role="tabpanel" aria-labelledby="tab-voice">
   <div class="chain-wrap">
     <div class="chain-lbl">效果鏈流程（點擊亮節點可捲動至對應參數卡）</div>
     <div class="chain-flow" id="chain-voice"></div>
   </div>
-  <div class="drop" id="drop-voice">
+  <div class="drop" id="drop-voice" role="button" tabindex="0" aria-controls="fi-voice" aria-label="選擇人聲音訊檔">
     <div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><rect x="4" y="15" width="16" height="6" rx="2"/></svg></div>
     <div class="dt">拖曳人聲音訊到這裡，或點擊選擇</div>
     <div class="dh">支援 WAV / MP3 / M4A / AAC / FLAC / MP4 ⋯ 瀏覽器能解碼即可</div>
     <input type="file" class="fi" id="fi-voice" accept="audio/*,video/mp4">
   </div>
   <div class="filebar" id="fb-voice"><span><b id="fn-voice"></b> <span id="fm-voice"></span></span><button class="rl" data-t="fi-voice">重新選擇</button></div>
-  <div class="status" id="st-voice"></div>
+  <div class="status" id="st-voice" role="status" aria-live="polite"></div>
   <section class="result" id="res-voice">
     <div class="blk">總結建議</div>
     <div class="summary-panel" id="sum-voice"></div>
@@ -363,19 +365,19 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 </div>
 
 <!-- BGM 面板 -->
-<div class="panel" id="panel-bgm" data-track="bgm">
+<div class="panel" id="panel-bgm" data-track="bgm" role="tabpanel" aria-labelledby="tab-bgm" hidden>
   <div class="chain-wrap">
     <div class="chain-lbl">效果鏈流程（點擊亮節點可捲動至對應參數卡）</div>
     <div class="chain-flow" id="chain-bgm"></div>
   </div>
-  <div class="drop" id="drop-bgm">
+  <div class="drop" id="drop-bgm" role="button" tabindex="0" aria-controls="fi-bgm" aria-label="選擇 BGM 音訊檔">
     <div class="di"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
     <div class="dt">拖曳 BGM 音訊到這裡，或點擊選擇</div>
-    <div class="dh">建議上傳完整長度配樂軌，供與人聲比對混音電平</div>
+    <div class="dh">建議上傳五分鐘內的代表片段，供與人聲比對混音電平</div>
     <input type="file" class="fi" id="fi-bgm" accept="audio/*,video/mp4">
   </div>
   <div class="filebar" id="fb-bgm"><span><b id="fn-bgm"></b> <span id="fm-bgm"></span></span><button class="rl" data-t="fi-bgm">重新選擇</button></div>
-  <div class="status" id="st-bgm"></div>
+  <div class="status" id="st-bgm" role="status" aria-live="polite"></div>
   <section class="result" id="res-bgm">
     <div class="blk">總結建議</div>
     <div class="summary-panel" id="sum-bgm"></div>
@@ -414,20 +416,20 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 
 <script>
 // ===== 常數 =====
-const APP_VERSION = '0.2.1';
+const APP_VERSION = '0.3.0';
 const APP_UPDATED_AT = '2026-08-13';
 const NOISE_BASE  = -60;
 const NEAR_FULL_SCALE_AMP = Math.pow(10, -0.3 / 20);
 const PEAK_SAFETY_MARGIN_DB = 1;
 const BGM_MASK_TH = 0.32;
 
-// ===== 平台響度規範 Presets（數據包 1）=====
+// ===== 常用響度起始目標 Presets（數據包 1）=====
 const PLATFORM_PRESETS = {
-  youtube:   { label: 'YouTube / Spotify',        targetLufs: -14, targetTp: -1.0, social: false },
-  podcast:   { label: 'Apple Podcasts',            targetLufs: -16, targetTp: -1.0, social: false },
-  social:    { label: 'TikTok / IG Reels',         targetLufs: -11, targetTp: -1.0, social: true  },
-  broadcast: { label: '廣播影視 / Netflix (R128)', targetLufs: -23, targetTp: -2.0, social: false },
-  custom:    { label: '自訂',                      targetLufs: -16, targetTp: -1.0, social: false  }
+  youtube:   { label: 'Online / Streaming',        targetLufs: -14, targetTp: -1.0, social: false },
+  podcast:   { label: 'Spoken / Podcast',          targetLufs: -16, targetTp: -1.0, social: false },
+  social:    { label: 'Short-form',                targetLufs: -11, targetTp: -1.0, social: true  },
+  broadcast: { label: 'Broadcast-style reference', targetLufs: -23, targetTp: -2.0, social: false },
+  custom:    { label: 'Custom',                    targetLufs: -16, targetTp: -1.0, social: false  }
 };
 
 // ===== BGM Ducking 內容類型矩陣（數據包 3）=====
@@ -1747,9 +1749,15 @@ function rerenderAll() {
 // ===== Loading Overlay =====
 function showLoad(msg) {
   document.getElementById('ldMsg').textContent = msg;
-  document.getElementById('loadingOverlay').classList.add('show');
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('show');
+  overlay.setAttribute('aria-busy', 'true');
 }
-function hideLoad() { document.getElementById('loadingOverlay').classList.remove('show'); }
+function hideLoad() {
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.remove('show');
+  overlay.setAttribute('aria-busy', 'false');
+}
 
 function beginAnalysisRun(trackId) {
   const runId = ++analysisRuns[trackId];
@@ -1784,23 +1792,58 @@ function initTrack(tid) {
   drop.style.setProperty('--accent-track', accentColor);
   ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('drag'); }));
   ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  const chooseFile = () => { fi.value = ''; fi.click(); };
   drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) handleFile(tid, f); });
-  drop.addEventListener('click', () => fi.click());
+  drop.addEventListener('click', chooseFile);
+  drop.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chooseFile(); }
+  });
   fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(tid, e.target.files[0]); });
 }
 initTrack('voice');
 initTrack('bgm');
 
 document.querySelectorAll('.rl').forEach(btn => {
-  btn.addEventListener('click', () => document.getElementById(btn.dataset.t).click());
+  btn.addEventListener('click', () => { const input = document.getElementById(btn.dataset.t); input.value = ''; input.click(); });
 });
 
 function activateTrack(trackId) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelector(`.tab[data-track="${trackId}"]`).classList.add('active');
-  document.getElementById('panel-' + trackId).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); t.tabIndex = -1; });
+  document.querySelectorAll('.panel').forEach(p => { p.classList.remove('active'); p.hidden = true; });
+  const tab = document.querySelector(`.tab[data-track="${trackId}"]`);
+  tab.classList.add('active'); tab.setAttribute('aria-selected', 'true'); tab.tabIndex = 0;
+  const panel = document.getElementById('panel-' + trackId);
+  panel.classList.add('active'); panel.hidden = false;
   document.documentElement.style.setProperty('--accent-track', trackId === 'voice' ? '#5ec9a3' : '#7aa2ff');
+}
+
+async function inspectAudioFile(file, { timeoutMs = 5000, maxBytes = 128 * 1024 * 1024, maxDuration = 300 } = {}) {
+  let url = null;
+  try {
+    url = URL.createObjectURL(file);
+    if (file.size > maxBytes) {
+      return { allowed: false, size: file.size, duration: null, reason: `檔案 ${(file.size / 1024 / 1024).toFixed(1)} MiB 超過 128 MiB 上限` };
+    }
+    const duration = await new Promise((resolve, reject) => {
+      const audio = document.createElement('audio');
+      const timer = setTimeout(() => reject(new Error('無法在 5 秒內確認音檔時長')), timeoutMs);
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => {
+        clearTimeout(timer);
+        Number.isFinite(audio.duration) && audio.duration >= 0 ? resolve(audio.duration) : reject(new Error('無法確認音檔時長'));
+      };
+      audio.onerror = () => { clearTimeout(timer); reject(new Error('無法讀取音檔 metadata')); };
+      audio.src = url;
+    });
+    if (duration > maxDuration) {
+      return { allowed: false, size: file.size, duration, reason: `音檔 ${duration.toFixed(1)} 秒超過 300 秒上限` };
+    }
+    return { allowed: true, size: file.size, duration, reason: '' };
+  } catch (err) {
+    return { allowed: false, size: file.size, duration: null, reason: err.message || '無法確認音檔時長' };
+  } finally {
+    if (url) URL.revokeObjectURL(url);
+  }
 }
 
 async function handleFile(tid, file) {
@@ -1808,17 +1851,26 @@ async function handleFile(tid, file) {
   const stEl = document.getElementById('st-' + tid);
   const setSt = msg => { stEl.textContent = msg; stEl.classList.toggle('show', !!msg); };
 
-  const runId = beginAnalysisRun(tid);
   clearTrackState(tid);
   setSt('');
   fb.classList.add('show');
   document.getElementById('fn-' + tid).textContent = file.name;
   document.getElementById('fm-' + tid).textContent = `(${(file.size/1024/1024).toFixed(2)} MB)`;
 
+  // 先取得新 run token，metadata 檢查期間也不能讓舊分析重新渲染。
+  const runId = beginAnalysisRun(tid);
   try {
-    // 雙 rAF：確保 Overlay 渲染完成再開始計算。
+    // 雙 rAF：確保 Overlay 渲染完成再開始檢查或解碼。
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     if (!isCurrentAnalysisRun(tid, runId)) return;
+    setSt('檢查檔案大小與時長…');
+    const inspected = await inspectAudioFile(file);
+    if (!isCurrentAnalysisRun(tid, runId)) return;
+    if (!inspected.allowed) {
+      setSt(`未分析：${inspected.reason}。請在 PR／AU 匯出不超過五分鐘的代表片段。`);
+      return;
+    }
+    document.getElementById('fm-' + tid).textContent = `(${(inspected.size/1024/1024).toFixed(2)} MB / ${inspected.duration.toFixed(1)} 秒)`;
     aCtx = aCtx || new (window.AudioContext || window.webkitAudioContext)();
     setSt('解碼音訊中…');
     const ab = await file.arrayBuffer();
@@ -1841,6 +1893,15 @@ async function handleFile(tid, file) {
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     activateTrack(tab.dataset.track);
+  });
+  tab.addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const tabs = [...document.querySelectorAll('.tab')];
+    const current = tabs.indexOf(tab);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (current + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    activateTrack(tabs[next].dataset.track);
+    tabs[next].focus();
   });
 });
 
@@ -1996,6 +2057,11 @@ function applyPreviewState() {
   });
 
   hideLoad();
+  if (preview === 'large-file') {
+    setPreviewError('voice', '未分析：檔案 256.0 MiB 超過 128 MiB 上限。請在 PR／AU 匯出不超過五分鐘的代表片段。');
+    activateTrack('voice');
+    return;
+  }
   if (preview === 'loading') {
     showLoad('智慧調音分析中，請勿關閉網頁…');
     return;
