@@ -75,6 +75,7 @@ class ElementStub {
   }
 
   addEventListener() {}
+  setAttribute() {}
   click() {}
   scrollIntoView() {}
 
@@ -103,6 +104,7 @@ class ElementStub {
 }
 
 const elements = new Map();
+const objectUrls = { created: 0, revoked: 0 };
 const getElement = id => {
   if (!elements.has(id)) elements.set(id, new ElementStub(id));
   return elements.get(id);
@@ -111,6 +113,9 @@ const getElement = id => {
 const documentStub = {
   documentElement: new ElementStub('documentElement'),
   getElementById: getElement,
+  createElement() {
+    return { preload: '', duration: 1, set src(_) { queueMicrotask(() => this.onloadedmetadata?.()); } };
+  },
   querySelector(selector) {
     if (selector.startsWith('.tab[data-track="')) {
       const track = selector.match(/"([^"]+)"/)?.[1] || '';
@@ -154,6 +159,10 @@ const context = vm.createContext({
   requestAnimationFrame: callback => callback(),
   setTimeout,
   clearTimeout,
+  URL: {
+    createObjectURL: () => { objectUrls.created++; return `blob:test-${objectUrls.created}`; },
+    revokeObjectURL() { objectUrls.revoked++; }
+  },
   URLSearchParams
 });
 
@@ -164,7 +173,7 @@ const copyButtonIdleHtml = '<svg aria-hidden="true"></svg><span>複製完整報�
 getElement('copyBtn').innerHTML = copyButtonIdleHtml;
 
 try {
-  vm.runInContext(`${match[1]}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: indexPath });
+  vm.runInContext(`${match[1]}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, inspectAudioFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: indexPath });
   const result = context.window.runReportSelfTest?.();
   const appTest = context.__appTest;
 
@@ -201,6 +210,23 @@ try {
   appTest.finishAnalysisRun();
   if (loadingOverlay.classList.contains('show')) {
     interactionFailures.push('loading overlay remained visible after all parallel analysis runs finished');
+  }
+
+  let oversizedArrayBufferCalls = 0;
+  await appTest.handleFile('voice', {
+    name: 'oversized.wav',
+    size: 128 * 1024 * 1024 + 1,
+    arrayBuffer: async () => { oversizedArrayBufferCalls++; return new ArrayBuffer(0); }
+  });
+  if (oversizedArrayBufferCalls !== 0 || !elements.get('st-voice').textContent.includes('代表片段') || loadingOverlay.classList.contains('show')) {
+    interactionFailures.push('oversized preflight decoded the file or left loading/error state incorrect');
+  }
+  const originalCreateElement = context.document.createElement;
+  context.document.createElement = () => ({ preload: '', set src(_) {} });
+  const timedOutInspection = await appTest.inspectAudioFile({ name: 'timeout.wav', size: 1024 }, { timeoutMs: 1 });
+  context.document.createElement = originalCreateElement;
+  if (timedOutInspection.allowed || !timedOutInspection.reason.includes('確認音檔時長')) {
+    interactionFailures.push('metadata timeout did not safely reject the file');
   }
 
   const testAnalysis = appTest.makeTestAnalysis({ smpPkDb: -0.2, tpDb: -0.1, nearPeakCount: 7 });
@@ -293,6 +319,9 @@ try {
   await oldErrorRun;
   if (appTest.getTrack('voice')?.filename !== 'new-error.wav' || elements.get('st-voice').textContent) {
     interactionFailures.push('stale analysis error overwrote the newer result or status');
+  }
+  if (objectUrls.created !== objectUrls.revoked) {
+    interactionFailures.push('metadata preflight did not revoke every object URL');
   }
 
   if (interactionFailures.length) {
