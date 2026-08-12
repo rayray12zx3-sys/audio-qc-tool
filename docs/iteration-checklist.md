@@ -14,13 +14,14 @@ Use this checklist for each implementation cycle.
 ### UI-only
 
 - Desktop layout still readable
-- Mobile layout still usable
+- `1440x900` and `1024x768` checked when no task-specific desktop viewport is given
 - Empty state checked
 - Loading state checked
 - Result state checked
 - Error state checked
 - Report or action buttons checked if the change touches them
 - If available, use localhost preview states such as `?preview=voice|bgm|both|error-voice|error-bgm|loading`
+- Mobile or narrow-screen layout checked only when the task explicitly requests it
 
 ### audio logic
 
