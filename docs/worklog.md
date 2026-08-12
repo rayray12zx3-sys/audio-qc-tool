@@ -4,12 +4,20 @@ Compact record of project iterations. Keep entries factual and short.
 
 ## 2026-08-13
 
+### v0.3.1 static asset split
+
+- Type: `refactor`, `test`
+- Files: `index.html`, `styles.css`, `audio-analysis.js`, `app.js`, `scripts/report-self-test.mjs`, `tests/`, version and handoff docs
+- Completed: Moved the existing inline CSS unchanged to `styles.css`; moved pure DSP behind the classic `window.AudioAnalysis` namespace; moved remaining report, state and UI behavior to `app.js`. Kept relative classic assets so `file://` and GitHub Pages need no bundler or backend.
+- Verification: Both scripts passed `node --check`; report and DSP self-tests passed, including the True Peak to Clip Gain integration assertion; three Chromium E2E cases passed desktop states, synthetic upload flow and direct `file://` loading; in-app browser smoke passed external assets and all preview states at `1440x900` and `1024x768` with no overflow or console error/warn. GitHub Actions remains pending until push.
+- Risk: This batch intentionally does not change formulas, thresholds, wording, DOM order or interactions. External relative assets must remain beside `index.html` when copied or deployed.
+
 ### v0.3.0 large-file excerpt preflight and desktop UX
 
 - Type: `audio import`, `UI-only`, `accessibility`
 - Files: `index.html`, `package.json`, `tests/app.spec.mjs`, `README.md`, `AGENTS.md`, `scripts/preview-smoke-urls.*`, `docs/preview-smoke-check.md`, `TASK_STATE.md`
 - Completed: Added an object-URL metadata preflight before `arrayBuffer()`/decode (128 MiB, 300 seconds, 5-second timeout) and safe rejection that asks for a PR/AU representative excerpt. Added a large-file preview state, same-file reselect support, desktop keyboard/tab semantics, live loading/status feedback, profile-label presets, and desktop smoke coverage.
-- Verification: Report and DSP self-tests passed; the report test proves oversized input does not call `arrayBuffer()` and object URLs are revoked. Two Chromium E2E cases passed synthetic WAV upload/reselect/invalid replacement/large-file rejection plus desktop state, copy, keyboard and console checks. In-app browser smoke passed `1440x900` and `1024x768` without overflow or console error/warn. GitHub Actions remains pending until push.
+- Verification: Report and DSP self-tests passed; the report test proves oversized input does not call `arrayBuffer()` and object URLs are revoked. Two Chromium E2E cases passed synthetic WAV upload/reselect/invalid replacement/large-file rejection plus desktop state, copy, keyboard and console checks. In-app browser smoke passed `1440x900` and `1024x768` without overflow or console error/warn. GitHub Actions passed on PR #6 before squash merge.
 - Risk: Metadata availability remains browser/codec dependent; unavailable or slow metadata intentionally rejects rather than attempting a memory-heavy decode.
 
 ### v0.2.1 multichannel meter safety
@@ -17,7 +25,7 @@ Compact record of project iterations. Keep entries factual and short.
 - Type: `audio logic`, `test`, `CI`
 - Files: `index.html`, `package.json`, `package-lock.json`, `tests/`, `playwright.config.mjs`, `.github/workflows/verify.yml`, `README.md`, `TASK_STATE.md`
 - Completed: Changed peak, near-peak, true-peak and DC-offset paths to preserve the worst individual channel; changed estimated integrated loudness to independently K-weight and equally sum channel block energy. Added a >2-channel caveat and reduced-confidence messaging for frequency/noise indicators derived from negative-correlation mono downmix.
-- Verification: Report self-test passed; DSP self-test passed 8 deterministic fixtures; Chromium E2E passed empty/loading/both/copy/console at `1440x900` and `1024x768`; localhost browser smoke showed no horizontal overflow or console error/warn. CI is configured to repeat report, DSP and E2E checks on PRs and `main` and remains pending until push.
+- Verification: Report self-test passed; DSP self-test passed 8 deterministic fixtures; Chromium E2E passed empty/loading/both/copy/console at `1440x900` and `1024x768`; localhost browser smoke showed no horizontal overflow or console error/warn. GitHub Actions passed on PR #5 before squash merge.
 - Risk: This is still browser-side estimated analysis. Downmix-derived spectrum/noise indicators can be misleading for phase-cancelled material; no large-file behavior was changed.
 
 ## 2026-08-12

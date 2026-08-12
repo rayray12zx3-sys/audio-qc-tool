@@ -5,9 +5,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const script = html.match(/<script>\s*([\s\S]*?)<\/script>/i)?.[1];
-if (!script) throw new Error('index.html inline script not found');
+const script = fs.readFileSync(path.join(root, 'audio-analysis.js'), 'utf8');
 
 class Element {
   constructor() { this.classList = { add() {}, remove() {}, toggle() {}, contains() { return false; } }; this.style = { setProperty() {} }; this.dataset = {}; this.parentElement = { clientWidth: 800 }; this.innerHTML = ''; this.textContent = ''; }
@@ -20,8 +18,8 @@ const document = { documentElement: new Element(), getElementById(id) { if (!ele
 const window = { devicePixelRatio: 1, location: { search: '' }, AudioContext: class {}, webkitAudioContext: class {} };
 const context = vm.createContext({ console, document, window, navigator: {}, requestAnimationFrame: cb => cb(), setTimeout, clearTimeout, URLSearchParams });
 window.window = window;
-vm.runInContext(`${script}\nglobalThis.__dsp = { analyzeAudio, truePeak, buildVoiceFx };`, context, { filename: 'index.html' });
-const { analyzeAudio, truePeak, buildVoiceFx } = context.__dsp;
+vm.runInContext(script, context, { filename: 'audio-analysis.js' });
+const { analyzeAudio, truePeak } = context.window.AudioAnalysis;
 
 function buffer(channels, sampleRate = 48000) {
   return { numberOfChannels: channels.length, length: channels[0]?.length || 0, sampleRate, duration: (channels[0]?.length || 0) / sampleRate, getChannelData: index => channels[index] };
@@ -59,11 +57,6 @@ approx(truePeak(new Float32Array([0.5])), db(0.5), 0.001, 'one-sample true peak'
 approx(analyzeAudio(buffer([new Float32Array([0.5]), new Float32Array([0])])).tpDb, db(0.5), 0.001, 'short multi-channel true peak');
 assert.doesNotThrow(() => analyzeAudio(buffer([new Float32Array(0)])), 'zero-length analysis remains safe');
 
-// The gain recommendation must cap from the channel-safe true peak.
-const gainFx = buildVoiceFx({ ...monoResult, tpDb: -0.2, kwRms: -30, smpPkDb: -0.2, bands: monoResult.bands });
-const clipGain = gainFx.find(effect => effect.id === 'clipgain');
-assert.ok(clipGain.note.includes('削波保護已啟動'), 'true peak limits Clip Gain');
-
 const surround = analyzeAudio(buffer([mono, mono, mono]));
 assert.ok(surround.channelCaveat, 'more than two channels exposes a channel caveat');
-console.log(JSON.stringify({ ok: true, fixtures: ['mono', 'identical-stereo', 'left-hot', 'anti-phase', 'short', 'zero', 'near-peak-frame', 'true-peak-gain'] }));
+console.log(JSON.stringify({ ok: true, fixtures: ['mono', 'identical-stereo', 'left-hot', 'anti-phase', 'short', 'zero', 'near-peak-frame'] }));
