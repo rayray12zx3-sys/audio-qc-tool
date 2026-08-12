@@ -66,6 +66,15 @@ npx playwright install chromium
 
 詳細 UI 檢查步驟見 `docs/preview-smoke-check.md`。
 
+## 靜態檔案結構
+
+- `index.html`：頁面結構與靜態資產載入順序。
+- `styles.css`：畫面樣式與桌面／窄螢幕基本版面。
+- `audio-analysis.js`：純瀏覽器 DSP，透過 `window.AudioAnalysis` 提供量測 API。
+- `app.js`：匯入、報告、畫面狀態與互動流程。
+
+所有 script 均為 classic script，不需要 bundler；可直接開啟 `index.html`，也可部署至 GitHub Pages。
+
 真實音檔抽查流程見 `docs/audio-spot-check.md`。
 
 迭代紀錄見 `docs/worklog.md`。

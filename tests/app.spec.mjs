@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 function makeWav() {
   const data = Buffer.alloc(960, 0);
@@ -58,4 +60,16 @@ test('upload replacement and large-file rejection are safe', async ({ page }) =>
   await page.goto('/?preview=large-file');
   await expect(page.locator('#st-voice')).toContainText('代表片段');
   await expect(page.locator('#res-voice')).not.toHaveClass(/show/);
+});
+
+test('index.html still opens directly with classic assets', async ({ page }) => {
+  const errors = [];
+  page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(pathToFileURL(path.join(process.cwd(), 'index.html')).href);
+  await expect(page.locator('#versionBadge')).toContainText('v0.3.1');
+  await expect(page.locator('#copyBtn')).toBeDisabled();
+  await expect(page.locator('link[href="styles.css"]')).toHaveCount(1);
+  expect(await page.evaluate(() => typeof window.AudioAnalysis?.analyzeAudio)).toBe('function');
+  expect(errors).toEqual([]);
 });
