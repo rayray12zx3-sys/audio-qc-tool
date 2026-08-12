@@ -35,10 +35,26 @@ http://127.0.0.1:8123/
 ```powershell
 npm run smoke:manual
 npm run test:report
+npm run test:dsp
+npm run test:e2e
 ```
 
 - `smoke:manual`：列出 preview smoke check URL；不會自動開瀏覽器。
 - `test:report`：在 Node 環境執行既有 report self-test。
+- `test:dsp`：驗證 mono、stereo、多聲道與極短音訊的安全量測行為。
+- `test:e2e`：以 Chromium 覆蓋 empty、loading、preview、報告複製及 console 基本回歸。
+
+首次執行 E2E 時需安裝 Chromium：
+
+```powershell
+npx playwright install chromium
+```
+
+## 多聲道量測說明
+
+- Sample Peak、Estimated True Peak 與 DC Offset 以各聲道最壞值計算；接近滿刻度以 sample frame 計數，同一 frame 多個聲道超標只算一次。
+- Estimated Integrated Loudness 會先對每個聲道各自套用 K-weighting，再以等權方式合計區塊能量；相同 stereo 訊號相對 mono 約增加 3.01 dB。
+- 頻譜、ZCR、noise 與波形為 mono downmix 衍生指標；若左右聲道負相關，畫面與複製報告會標記這些指標的信心降低。超過雙聲道時也會顯示等權合計與 mono 衍生指標的注意事項。
 
 沒有 Node/npm 時，可用：
 

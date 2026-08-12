@@ -1,11 +1,16 @@
 {
   "name": "audio-tuning-tool",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
     "serve": "python -m http.server 8123 --bind 127.0.0.1",
     "smoke:manual": "node scripts/preview-smoke-urls.mjs",
-    "test:report": "node scripts/report-self-test.mjs"
+    "test:report": "node scripts/report-self-test.mjs",
+    "test:dsp": "node tests/dsp-self-test.mjs",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0"
   }
 }
