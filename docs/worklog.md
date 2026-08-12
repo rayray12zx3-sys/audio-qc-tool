@@ -2,6 +2,16 @@
 
 Compact record of project iterations. Keep entries factual and short.
 
+## 2026-08-13
+
+### v0.2.1 multichannel meter safety
+
+- Type: `audio logic`, `test`, `CI`
+- Files: `index.html`, `package.json`, `package-lock.json`, `tests/`, `playwright.config.mjs`, `.github/workflows/verify.yml`, `README.md`, `TASK_STATE.md`
+- Completed: Changed peak, near-peak, true-peak and DC-offset paths to preserve the worst individual channel; changed estimated integrated loudness to independently K-weight and equally sum channel block energy. Added a >2-channel caveat and reduced-confidence messaging for frequency/noise indicators derived from negative-correlation mono downmix.
+- Verification: Report self-test passed; DSP self-test passed 8 deterministic fixtures; Chromium E2E passed empty/loading/both/copy/console at `1440x900` and `1024x768`; localhost browser smoke showed no horizontal overflow or console error/warn. CI is configured to repeat report, DSP and E2E checks on PRs and `main` and remains pending until push.
+- Risk: This is still browser-side estimated analysis. Downmix-derived spectrum/noise indicators can be misleading for phase-cancelled material; no large-file behavior was changed.
+
 ## 2026-08-12
 
 ### Visible v0.2.0 and desktop-first support

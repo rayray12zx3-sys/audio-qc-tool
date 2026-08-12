@@ -414,8 +414,8 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 
 <script>
 // ===== 常數 =====
-const APP_VERSION = '0.2.0';
-const APP_UPDATED_AT = '2026-08-12';
+const APP_VERSION = '0.2.1';
+const APP_UPDATED_AT = '2026-08-13';
 const NOISE_BASE  = -60;
 const NEAR_FULL_SCALE_AMP = Math.pow(10, -0.3 / 20);
 const PEAK_SAFETY_MARGIN_DB = 1;
@@ -508,27 +508,35 @@ function kWeightedRms(mono, sr) {
 // 取代單純全域 K-weighted RMS：靜音段過多的素材（如本工具常見的對白檔案）
 // 若用整段平均 RMS 估算，會被靜音段嚴重拉低、偏離人耳實際感知響度。
 // 這裡用 400ms 滑動區塊（75% overlap）+ 兩道閘門近似處理；不是合規 loudness meter。
-function integratedLoudness(mono, sr) {
+function integratedLoudness(channels, sr) {
   const c = kwCoeffs(sr);
-  const f = mono.slice();
-  biquadInPlace(f, c.hs);
-  biquadInPlace(f, c.hp);
+  const filtered = channels.map(channel => {
+    const f = channel.slice();
+    biquadInPlace(f, c.hs);
+    biquadInPlace(f, c.hp);
+    return f;
+  });
+  const len = filtered[0]?.length || 0;
 
   const blockSize = Math.round(0.4 * sr); // 400ms
   const hopSize   = Math.round(0.1 * sr); // 100ms（75% overlap）
 
   // 素材過短（< 400ms），無法分區塊，退回全域 RMS
-  if (f.length < blockSize) {
+  if (len < blockSize) {
     let ms = 0;
-    for (let i = 0; i < f.length; i++) ms += f[i] * f[i];
-    return toDb(Math.sqrt(ms / Math.max(f.length, 1)));
+    for (const channel of filtered) {
+      for (let i = 0; i < len; i++) ms += channel[i] * channel[i];
+    }
+    return toDb(Math.sqrt(ms / Math.max(len, 1)));
   }
 
   const LUFS_OFFSET = -0.691; // BS.1770 常用校正常數；此實作仍為近似估算。
   const blocks = [];
-  for (let start = 0; start + blockSize <= f.length; start += hopSize) {
+  for (let start = 0; start + blockSize <= len; start += hopSize) {
     let ms = 0;
-    for (let i = start; i < start + blockSize; i++) ms += f[i] * f[i];
+    for (const channel of filtered) {
+      for (let i = start; i < start + blockSize; i++) ms += channel[i] * channel[i];
+    }
     ms /= blockSize;
     blocks.push({ ms, l: LUFS_OFFSET + 10 * Math.log10(Math.max(ms, 1e-12)) });
   }
@@ -547,11 +555,13 @@ function integratedLoudness(mono, sr) {
 }
 
 // ===== True Peak（Catmull-Rom 三次插值，4x 過採樣）=====
-function truePeak(mono) {
-  const n = mono.length;
+function truePeak(channel) {
+  const n = channel.length;
   let mx = 0;
+  // 先納入所有原始 sample，讓零長度與極短素材也有可預期結果。
+  for (let i = 0; i < n; i++) mx = Math.max(mx, Math.abs(channel[i]));
   for (let i = 1; i < n - 2; i++) {
-    const p0 = mono[i-1], p1 = mono[i], p2 = mono[i+1], p3 = mono[i+2];
+    const p0 = channel[i-1], p1 = channel[i], p2 = channel[i+1], p3 = channel[i+2];
     // t = 0.25 / 0.5 / 0.75
     for (let k = 1; k <= 3; k++) {
       const t = k * 0.25, t2 = t * t, t3 = t2 * t;
@@ -559,10 +569,17 @@ function truePeak(mono) {
       const a = Math.abs(v);
       if (a > mx) mx = a;
     }
-    const a0 = Math.abs(p1);
-    if (a0 > mx) mx = a0;
   }
   return toDb(mx);
+}
+
+function downmixToMono(channels, len) {
+  const mono = new Float32Array(len);
+  if (!channels.length) return mono;
+  for (const channel of channels) {
+    for (let i = 0; i < len; i++) mono[i] += channel[i] / channels.length;
+  }
+  return mono;
 }
 
 // ===== FFT（iterative Cooley-Tukey radix-2）=====
@@ -649,26 +666,33 @@ function stftSpectrum(mono, sr) {
 // ===== 主分析函式 =====
 function analyzeAudio(buf) {
   const sr = buf.sampleRate, ch = buf.numberOfChannels, len = buf.length;
-  // 混為單聲道
-  const mono = new Float32Array(len);
-  for (let c = 0; c < ch; c++) {
-    const d = buf.getChannelData(c);
-    for (let i = 0; i < len; i++) mono[i] += d[i] / ch;
-  }
-  // Peak / Clipping / DC Offset
-  let smpPk = 0, nearPeakCount = 0, dcSum = 0;
+  const channels = Array.from({ length: ch }, (_, c) => buf.getChannelData(c));
+  // Downmix 僅供頻譜、ZCR、noise 與波形相關的單聲道衍生指標。
+  const mono = downmixToMono(channels, len);
+  // Peak / Clipping / DC Offset：保留逐聲道最壞值，避免聲道互相抵消而漏報。
+  let smpPk = 0, nearPeakCount = 0;
+  let dcOffset = 0;
+  const dcSums = new Float64Array(ch);
   for (let i = 0; i < len; i++) {
-    const a = Math.abs(mono[i]);
-    if (a > smpPk) smpPk = a;
-    if (a >= NEAR_FULL_SCALE_AMP) nearPeakCount++;
-    dcSum += mono[i];
+    let frameNearPeak = false;
+    for (let c = 0; c < ch; c++) {
+      const sample = channels[c][i];
+      const a = Math.abs(sample);
+      if (a > smpPk) smpPk = a;
+      if (a >= NEAR_FULL_SCALE_AMP) frameNearPeak = true;
+      dcSums[c] += sample;
+    }
+    if (frameNearPeak) nearPeakCount++;
   }
   const smpPkDb = toDb(smpPk);
-  const dcOffset = dcSum / len;
-  // True Peak（4x Catmull-Rom）
-  const tpDb = truePeak(mono);
-  // K-Weighted RMS（感知響度）
-  const kwRms = integratedLoudness(mono, sr);
+  for (let c = 0; c < ch; c++) {
+    const offset = dcSums[c] / Math.max(len, 1);
+    if (Math.abs(offset) > Math.abs(dcOffset)) dcOffset = offset;
+  }
+  // True Peak（每聲道 4x Catmull-Rom）
+  const tpDb = Math.max(...channels.map(truePeak), toDb(0));
+  // K-Weighted loudness：每聲道獨立濾波後，逐區塊等權相加。
+  const kwRms = integratedLoudness(channels, sr);
   // 逐幀 RMS（50ms，用於 noiseFloor / LRA / silentRatio）
   const fLen = Math.round(sr * 0.05);
   const fDbs = [];
@@ -739,7 +763,8 @@ function analyzeAudio(buf) {
     sr, ch, dur: buf.duration,
     smpPkDb, tpDb, kwRms, noiseFloor, actRms, overallRms,
     snr, crest, lra, nearPeakCount, dcOffset, silentRatio, zcr,
-    stereo, bands, specRatio, pSib, sfm8k
+    stereo, bands, specRatio, pSib, sfm8k,
+    channelCaveat: ch > 2 ? '超過雙聲道：Estimated Integrated Loudness 採各聲道等權加總；頻譜、噪音與波形仍由平均 mono downmix 衍生。' : undefined
   };
 }
 
@@ -1438,6 +1463,7 @@ function buildTrackReport(trackId) {
   const rawFx = trackId === 'voice' ? buildVoiceFx(a) : buildBgmFx(a);
   return {
     trackId, label, ready:true, filename:s.filename, status:trackStatus(diags),
+    ...(a.channelCaveat ? { channelCaveat: a.channelCaveat } : {}),
     priority: trackId === 'voice'
       ? 'Clip Gain → DeNoise → DeEsser → Dynamics → EQ → Hard Limiter'
       : 'HP Filter → Masking EQ → Stereo Expander → Dynamics → Ducking',
@@ -1492,6 +1518,7 @@ function renderTrackSummary(trackId) {
     <b>${r.status}</b> · ${r.filename}<br>
     主要問題：${r.issues.slice(0,3).join('、') || '未發現明顯問題'}<br>
     優先處理順序：${r.priority}
+    ${r.channelCaveat ? `<br><span class="note">注意：${r.channelCaveat}</span>` : ''}
     <div class="summary-grid">
       ${r.measurements.map(m => `<div><div class="summary-k">${m.kind}</div><div class="summary-v">${m.name}: ${m.value}</div></div>`).join('')}
     </div>`;
@@ -1532,18 +1559,15 @@ function renderMetrics(id, a) {
     mc('齒音瞬態峰值 P_Sib', `${(a.pSib||0).toFixed(1)} dBFS`, a.pSib<=-15?'供調音起點參考':'⚠ 過高，阻斷空氣感', a.pSib<=-15?'fg':'fw'),
   ].join('') + (a.stereo ? [
     mc('立體聲相關係數', a.stereo.corr.toFixed(2), a.stereo.corr<0?'⚠ 相位可能抵消':'未觸發相位風險', a.stereo.corr<0?'fb':'fg'),
-    mc('聲像寬度指標', a.stereo.width.toFixed(2), '0=重疊 1=極寬')
-  ].join('') : '');
+    mc('聲像寬度指標', a.stereo.width.toFixed(2), '0=重疊 1=極寬'),
+    ...(a.stereo.corr < 0 ? [mc('Mono-derived 指標信心', '降低', '頻譜、ZCR 與噪音指標來自 mono downmix，反相時可能被抵消', 'fw')] : [])
+  ].join('') : '') + (a.channelCaveat ? mc('多聲道量測注意', '等權加總', a.channelCaveat, 'fw') : '');
 }
 
 // ===== 渲染：Canvas 波形（降取樣 + 接近滿刻度標橙）=====
 function renderWaveform(canvasId, buf) {
   const ch = buf.numberOfChannels, len = buf.length;
-  const mono = new Float32Array(len);
-  for (let c = 0; c < ch; c++) {
-    const d = buf.getChannelData(c);
-    for (let i = 0; i < len; i++) mono[i] += d[i] / ch;
-  }
+  const mono = downmixToMono(Array.from({ length: ch }, (_, c) => buf.getChannelData(c)), len);
   const canvas = document.getElementById(canvasId);
   const dpr = window.devicePixelRatio || 1;
   const w   = canvas.parentElement.clientWidth - 24;
@@ -2018,6 +2042,8 @@ function buildReport() {
     t += `[${track.label}] ${track.ready ? track.filename : '尚未上傳'}\n${'-'.repeat(36)}\n`;
     if (!track.ready) { t += '尚未上傳分析\n\n'; return; }
     t += `狀態：${track.status}\n`;
+    if (track.channelCaveat) t += `多聲道注意：${track.channelCaveat}\n`;
+    if (S[track.trackId]?.a?.stereo?.corr < 0) t += '注意：頻譜、ZCR 與噪音指標來自 mono downmix；因左右聲道負相關，這些 mono-derived 指標的信心降低。\n';
     t += `估算摘要：\n`;
     track.measurements.forEach(m => t += `- ${m.kind}｜${m.name}: ${m.value}\n`);
     t += `問題摘要：\n`;

@@ -226,6 +226,16 @@ try {
     interactionFailures.push('clipboard failure did not provide feedback');
   }
 
+  const channelCaveat = '超過雙聲道：測試用多聲道注意事項';
+  appTest.render('voice', appTest.makeTestAnalysis({
+    stereo: { corr: -0.8, width: 0.2 },
+    channelCaveat
+  }), 'phase-risk.wav', testBuffer);
+  const phaseRiskReport = appTest.buildReport();
+  if (!phaseRiskReport.includes(channelCaveat) || !phaseRiskReport.includes('mono-derived 指標的信心降低')) {
+    interactionFailures.push('copied report is missing multichannel or negative-correlation caveat');
+  }
+
   const copyBtn = elements.get('copyBtn');
   copyBtn.innerHTML = copyButtonIdleHtml;
   appTest.render('voice', appTest.makeTestAnalysis(), 'copy-feedback-test.wav', testBuffer);
