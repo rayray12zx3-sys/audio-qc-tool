@@ -9,7 +9,7 @@ Compact record of project iterations. Keep entries factual and short.
 - Type: `refactor`, `test`
 - Files: `index.html`, `styles.css`, `audio-analysis.js`, `app.js`, `scripts/report-self-test.mjs`, `tests/`, version and handoff docs
 - Completed: Moved the existing inline CSS unchanged to `styles.css`; moved pure DSP behind the classic `window.AudioAnalysis` namespace; moved remaining report, state and UI behavior to `app.js`. Kept relative classic assets so `file://` and GitHub Pages need no bundler or backend.
-- Verification: Both scripts passed `node --check`; report and DSP self-tests passed, including the True Peak to Clip Gain integration assertion; three Chromium E2E cases passed desktop states, synthetic upload flow and direct `file://` loading; in-app browser smoke passed external assets and all preview states at `1440x900` and `1024x768` with no overflow or console error/warn. GitHub Actions remains pending until push.
+- Verification: Both scripts passed `node --check`; report and DSP self-tests passed, including the True Peak to Clip Gain integration assertion; three Chromium E2E cases passed desktop states, synthetic upload flow and direct `file://` loading; in-app browser smoke passed external assets and all preview states at `1440x900` and `1024x768` with no overflow or console error/warn. GitHub Actions passed on PR #7 before squash merge; the published Pages site shows `v0.3.1`, loads all three external assets, and has no console messages.
 - Risk: This batch intentionally does not change formulas, thresholds, wording, DOM order or interactions. External relative assets must remain beside `index.html` when copied or deployed.
 
 ### v0.3.0 large-file excerpt preflight and desktop UX
@@ -35,8 +35,8 @@ Compact record of project iterations. Keep entries factual and short.
 - Type: `UI-only`, `refactor`
 - Files: `index.html`, `package.json`, `scripts/report-self-test.mjs`, `README.md`, `AGENTS.md`, `.codex/skills/ui-smoke-check/`, `docs/preview-smoke-check.md`, `docs/iteration-checklist.md`, `TASK_STATE.md`
 - Completed: Added the visible `v0.2.0 · 更新 2026-08-12` badge and the same metadata to copied reports; aligned package version, release guidance, project rules, and UI verification guidance around PC/desktop browser support.
-- Verification: Report self-test passed with `interaction: "passed"`; static version consistency and `git diff --check` passed; localhost browser checks covered empty, voice, BGM, both, error, loading, report-copy feedback, and no horizontal overflow or console error at `1440x900` and approximately `1024x768`.
-- Risk: The version is not a formal GitHub Pages release until draft PR #4 is merged. Mobile is no longer a required acceptance target. The skill validator could not run because the host Python lacks `PyYAML`; frontmatter and `agents/openai.yaml` were reviewed directly.
+- Verification: Report self-test passed with `interaction: "passed"`; static version consistency and `git diff --check` passed; localhost browser checks covered empty, voice, BGM, both, error, loading, report-copy feedback, and no horizontal overflow or console error at `1440x900` and approximately `1024x768`. PR #4 was marked Ready, squash merged, and the published Pages site was confirmed at `v0.2.0`.
+- Risk: Mobile is no longer a required acceptance target. The skill validator could not run because the host Python lacks `PyYAML`; frontmatter and `agents/openai.yaml` were reviewed directly.
 
 ## 2026-08-05
 
