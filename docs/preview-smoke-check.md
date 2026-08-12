@@ -52,9 +52,11 @@ If port `8123` is already in use, choose another local port and update the URLs 
 - Mix section appears only when enough analyzed data exists.
 - Long recommendation text wraps without clipping.
 
-## Mobile Checklist
+## Optional Narrow-Screen Checklist
 
-Recommended viewport:
+Run this section only when the task explicitly requests phone or narrow-screen support. It is not part of the default acceptance criteria.
+
+Example viewport:
 
 ```text
 390x844

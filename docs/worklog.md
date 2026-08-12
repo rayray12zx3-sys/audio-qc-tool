@@ -2,6 +2,16 @@
 
 Compact record of project iterations. Keep entries factual and short.
 
+## 2026-08-12
+
+### Visible v0.2.0 and desktop-first support
+
+- Type: `UI-only`, `refactor`
+- Files: `index.html`, `package.json`, `scripts/report-self-test.mjs`, `README.md`, `AGENTS.md`, `.codex/skills/ui-smoke-check/`, `docs/preview-smoke-check.md`, `docs/iteration-checklist.md`, `TASK_STATE.md`
+- Completed: Added the visible `v0.2.0 · 更新 2026-08-12` badge and the same metadata to copied reports; aligned package version, release guidance, project rules, and UI verification guidance around PC/desktop browser support.
+- Verification: Report self-test passed with `interaction: "passed"`; static version consistency and `git diff --check` passed; localhost browser checks covered empty, voice, BGM, both, error, loading, report-copy feedback, and no horizontal overflow or console error at `1440x900` and approximately `1024x768`.
+- Risk: The version is not a formal GitHub Pages release until draft PR #4 is merged. Mobile is no longer a required acceptance target. The skill validator could not run because the host Python lacks `PyYAML`; frontmatter and `agents/openai.yaml` were reviewed directly.
+
 ## 2026-08-05
 
 ### Interaction race regression coverage and copy feedback hardening
