@@ -43,6 +43,7 @@ If port `8123` is already in use, choose another local port and update the URLs 
 | Voice error | `http://127.0.0.1:8123/?preview=error-voice` | Voice tab is active; voice error state is visible; copy report button is disabled. |
 | BGM error | `http://127.0.0.1:8123/?preview=error-bgm` | BGM tab is active; BGM error state is visible; copy report button is disabled. |
 | Loading | `http://127.0.0.1:8123/?preview=loading` | Loading overlay is visible; no completed report should be treated as ready. |
+| Large-file rejection | `http://127.0.0.1:8123/?preview=large-file` | Voice error explains the 128 MiB / five-minute representative-excerpt limit; no result is shown. |
 
 ## Desktop Checklist
 
@@ -51,6 +52,9 @@ If port `8123` is already in use, choose another local port and update the URLs 
 - Copy report button enabled or disabled state matches the preview state.
 - Mix section appears only when enough analyzed data exists.
 - Long recommendation text wraps without clipping.
+- At both `1440x900` and `1024x768`, no page-level horizontal overflow obscures upload, tab, or report-copy controls.
+- Keyboard: Tab reaches upload zones and tabs; Enter/Space opens an upload picker; Left/Right switches tabs.
+- Large-file error instructs the user to export a representative excerpt in PR/AU and does not offer forced continuation or browser trimming.
 
 ## Optional Narrow-Screen Checklist
 

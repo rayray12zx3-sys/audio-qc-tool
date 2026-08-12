@@ -7,7 +7,8 @@ const states = [
   ['Both results', `${baseUrl}?preview=both`, 'Voice and BGM data present; mix section visible; copy report enabled.'],
   ['Voice error', `${baseUrl}?preview=error-voice`, 'Voice tab active; error state visible; copy report disabled.'],
   ['BGM error', `${baseUrl}?preview=error-bgm`, 'BGM tab active; error state visible; copy report disabled.'],
-  ['Loading', `${baseUrl}?preview=loading`, 'Loading overlay visible; no completed report treated as ready.']
+  ['Loading', `${baseUrl}?preview=loading`, 'Loading overlay visible; no completed report treated as ready.'],
+  ['Large-file rejection', `${baseUrl}?preview=large-file`, 'Voice status explains the 128 MiB / five-minute representative-excerpt limit; no result is shown.']
 ];
 
 console.log('Manual preview smoke check');
@@ -15,7 +16,7 @@ console.log('');
 console.log('Start server first:');
 console.log('  npm run serve');
 console.log('');
-console.log('Recommended mobile viewport: 390x844');
+console.log('Required desktop viewports: 1440x900 and 1024x768');
 console.log('');
 console.log('Preview URLs:');
 

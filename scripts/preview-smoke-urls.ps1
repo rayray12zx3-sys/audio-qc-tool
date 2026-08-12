@@ -10,7 +10,8 @@ $states = @(
   @("Both results", "$baseUrl`?preview=both", "Voice and BGM data present; mix section visible; copy report enabled."),
   @("Voice error", "$baseUrl`?preview=error-voice", "Voice tab active; error state visible; copy report disabled."),
   @("BGM error", "$baseUrl`?preview=error-bgm", "BGM tab active; error state visible; copy report disabled."),
-  @("Loading", "$baseUrl`?preview=loading", "Loading overlay visible; no completed report treated as ready.")
+  @("Loading", "$baseUrl`?preview=loading", "Loading overlay visible; no completed report treated as ready."),
+  @("Large-file rejection", "$baseUrl`?preview=large-file", "Voice status explains the 128 MiB / five-minute representative-excerpt limit; no result is shown.")
 )
 
 Write-Host "Manual preview smoke check"
@@ -18,7 +19,7 @@ Write-Host ""
 Write-Host "Start server first:"
 Write-Host "  .\scripts\serve.ps1"
 Write-Host ""
-Write-Host "Recommended mobile viewport: 390x844"
+Write-Host "Required desktop viewports: 1440x900 and 1024x768"
 Write-Host ""
 Write-Host "Preview URLs:"
 

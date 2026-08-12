@@ -4,6 +4,14 @@ Compact record of project iterations. Keep entries factual and short.
 
 ## 2026-08-13
 
+### v0.3.0 large-file excerpt preflight and desktop UX
+
+- Type: `audio import`, `UI-only`, `accessibility`
+- Files: `index.html`, `package.json`, `tests/app.spec.mjs`, `README.md`, `AGENTS.md`, `scripts/preview-smoke-urls.*`, `docs/preview-smoke-check.md`, `TASK_STATE.md`
+- Completed: Added an object-URL metadata preflight before `arrayBuffer()`/decode (128 MiB, 300 seconds, 5-second timeout) and safe rejection that asks for a PR/AU representative excerpt. Added a large-file preview state, same-file reselect support, desktop keyboard/tab semantics, live loading/status feedback, profile-label presets, and desktop smoke coverage.
+- Verification: Report and DSP self-tests passed; the report test proves oversized input does not call `arrayBuffer()` and object URLs are revoked. Two Chromium E2E cases passed synthetic WAV upload/reselect/invalid replacement/large-file rejection plus desktop state, copy, keyboard and console checks. In-app browser smoke passed `1440x900` and `1024x768` without overflow or console error/warn. GitHub Actions remains pending until push.
+- Risk: Metadata availability remains browser/codec dependent; unavailable or slow metadata intentionally rejects rather than attempting a memory-heavy decode.
+
 ### v0.2.1 multichannel meter safety
 
 - Type: `audio logic`, `test`, `CI`
