@@ -43,7 +43,13 @@ body{
 /* ---- Header ---- */
 header{margin-bottom:22px;}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase;margin:0 0 8px;}
-h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0 0 10px;}
+.title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;}
+h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0;}
+.version-badge{
+  border:1px solid rgba(255,178,56,.35);border-radius:999px;padding:3px 8px;
+  color:var(--accent);background:rgba(255,178,56,.07);font-family:var(--mono);
+  font-size:10.5px;line-height:1.4;white-space:nowrap;
+}
 .desc{
   font-size:12px;color:var(--text-dim);line-height:1.75;
   border-left:2px solid var(--border);padding-left:14px;margin:0;
@@ -276,7 +282,10 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 <div class="wrap">
 <header>
   <p class="eyebrow">Audio Tuning Guide · Premiere Pro / Audition</p>
-  <h1>PR / AU 新手調音建議工具</h1>
+  <div class="title-row">
+    <h1>PR / AU 新手調音建議工具</h1>
+    <span class="version-badge" id="versionBadge" aria-label="工具版本"></span>
+  </div>
   <p class="desc">本工具在瀏覽器本機執行，音訊檔案不會上傳至任何伺服器。上傳人聲或 BGM 後，系統透過
   <b>K-Weighting 近似響度分析</b>與 <b>STFT 1/3 Octave 頻譜分析</b>，估算電平、動態範圍、
   頻段分布、Estimated True Peak（4x 插值近似）、削頂爆音、零交叉率及靜音比例。
@@ -405,6 +414,8 @@ table.p td.zh{font-family:var(--sans);color:var(--text-dim);font-size:11px;}
 
 <script>
 // ===== 常數 =====
+const APP_VERSION = '0.2.0';
+const APP_UPDATED_AT = '2026-08-12';
 const NOISE_BASE  = -60;
 const NEAR_FULL_SCALE_AMP = Math.pow(10, -0.3 / 20);
 const PEAK_SAFETY_MARGIN_DB = 1;
@@ -1451,6 +1462,8 @@ function buildReportData() {
   const report = {
     meta:{
       title:'PR/AU 新手調音建議報告',
+      appVersion:APP_VERSION,
+      appUpdatedAt:APP_UPDATED_AT,
       generatedAt:new Date().toLocaleString('zh-TW'),
       platform:PLATFORM.label,
       targetLufs:`${PLATFORM.targetLufs} LUFS`,
@@ -1999,7 +2012,7 @@ function updateCopyButtonState() {
 
 function buildReport() {
   const r = buildReportData();
-  let t = `${r.meta.title}\n產生時間：${r.meta.generatedAt}\n目標平台：${r.meta.platform}\nReference Target：${r.meta.targetLufs} / ${r.meta.peakCeiling}\n輸出格式：${r.meta.outputFormat}\n${'='.repeat(44)}\n\n`;
+  let t = `${r.meta.title}\n工具版本：v${r.meta.appVersion} · 更新 ${r.meta.appUpdatedAt}\n產生時間：${r.meta.generatedAt}\n目標平台：${r.meta.platform}\nReference Target：${r.meta.targetLufs} / ${r.meta.peakCeiling}\n輸出格式：${r.meta.outputFormat}\n${'='.repeat(44)}\n\n`;
   t += `[總結建議]\n整體狀態：${r.summary.status}\n主要問題：${r.summary.mainIssues.join('；') || '尚未發現明顯問題'}\n優先處理順序：${r.summary.priority}\n\n`;
   r.tracks.forEach(track => {
     t += `[${track.label}] ${track.ready ? track.filename : '尚未上傳'}\n${'-'.repeat(36)}\n`;
@@ -2067,6 +2080,7 @@ document.getElementById('copyBtn').addEventListener('click', () => {
 
 // 初始設定 accent-track（預設人聲 tab 啟動）
 document.documentElement.style.setProperty('--accent-track', '#5ec9a3');
+document.getElementById('versionBadge').textContent = `v${APP_VERSION} · 更新 ${APP_UPDATED_AT}`;
 applyPreviewState();
 updateCopyButtonState();
 </script>

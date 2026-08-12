@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const indexPath = path.join(rootDir, 'index.html');
+const packagePath = path.join(rootDir, 'package.json');
 const html = fs.readFileSync(indexPath, 'utf8');
+const packageData = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 const match = html.match(/<script>\s*([\s\S]*?)<\/script>/i);
 
 if (!match) {
@@ -162,7 +164,7 @@ const copyButtonIdleHtml = '<svg aria-hidden="true"></svg><span>複製完整報�
 getElement('copyBtn').innerHTML = copyButtonIdleHtml;
 
 try {
-  vm.runInContext(`${match[1]}\nglobalThis.__appTest = { makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: indexPath });
+  vm.runInContext(`${match[1]}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: indexPath });
   const result = context.window.runReportSelfTest?.();
   const appTest = context.__appTest;
 
@@ -173,6 +175,14 @@ try {
   }
 
   const interactionFailures = [];
+  const versionLabel = `v${appTest.appVersion} · 更新 ${appTest.appUpdatedAt}`;
+  const reportMeta = appTest.buildReportData().meta;
+  if (packageData.version !== appTest.appVersion || reportMeta.appVersion !== appTest.appVersion || reportMeta.appUpdatedAt !== appTest.appUpdatedAt) {
+    interactionFailures.push('package, app constants, and report metadata versions are inconsistent');
+  }
+  if (elements.get('versionBadge').textContent !== versionLabel || !appTest.buildReport().includes(`工具版本：${versionLabel}`)) {
+    interactionFailures.push('visible badge or copied report is missing the current version label');
+  }
   const firstVoiceRun = appTest.beginAnalysisRun('voice');
   const secondVoiceRun = appTest.beginAnalysisRun('voice');
   if (appTest.isCurrentAnalysisRun('voice', firstVoiceRun) || !appTest.isCurrentAnalysisRun('voice', secondVoiceRun)) {

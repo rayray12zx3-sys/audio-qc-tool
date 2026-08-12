@@ -1,6 +1,6 @@
 ---
 name: ui-smoke-check
-description: Run a lightweight UI verification pass for this static frontend audio tool. Use when Codex changes layout, copy, states, upload flow, playback controls, result rendering, or any interaction that could regress desktop or mobile behavior.
+description: Run a lightweight desktop-first UI verification pass for this static frontend audio tool. Use when Codex changes layout, copy, states, upload flow, playback controls, result rendering, or any interaction that could regress the PC browser experience; check narrow screens only when explicitly requested.
 ---
 
 # UI Smoke Check
@@ -11,7 +11,7 @@ Use this skill after UI or interaction changes in this repo.
 
 1. Identify whether the change is `UI-only`, `playback/export`, or `refactor with UI impact`.
 2. Re-check the relevant states instead of only the happy path.
-3. Verify both desktop and narrow mobile layout assumptions.
+3. Verify the desktop layouts relevant to the change; use `1440x900` and `1024x768` when no other viewport is specified.
 4. Report regressions, unverified areas, and any manual-only checks clearly.
 
 ## Required state checks
@@ -22,9 +22,14 @@ Use this skill after UI or interaction changes in this repo.
 - Loading or processing state.
 - Result state after success.
 - Error state for invalid or failed input.
-- Basic readability and tap/click order on mobile width.
+- Basic readability, click order, wrapping, and horizontal overflow on desktop.
 - Report or action button state if the change affects export, copy, or next-step actions.
 - If this repo exposes `preview` query states, use them on localhost before claiming manual state coverage.
+
+### Check narrow screens only when requested
+
+- Confirm basic readability and tap order at the requested viewport.
+- Report narrow-screen coverage separately; it is not part of the default acceptance criteria.
 
 ### If upload flow changed
 
@@ -37,14 +42,14 @@ Use this skill after UI or interaction changes in this repo.
 
 - Play, pause, and seek behavior if present.
 - Whether analysis blocks UI updates.
-- Whether controls remain reachable on mobile.
+- Whether controls remain reachable at supported desktop sizes.
 
 ### If result rendering changed
 
 - Card/table alignment.
 - Long text wrapping.
 - Metric emphasis and warning visibility.
-- Overflow or clipping in narrow screens.
+- Overflow or clipping at supported desktop sizes.
 
 ### If refactor changed structure
 
