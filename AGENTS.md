@@ -46,6 +46,14 @@
 - 路徑、base path、資產引用與 SPA 路由要特別注意，避免上 GitHub 後壞掉。
 - build 輸出若有 `dist/`、`build/` 或類似資料夾，應以可發佈靜態檔案為目標。
 
+## 公開倉庫安全
+
+- 此 repository 為公開專案；提交前必須確認 diff 中沒有密碼、API Key、token、cookie、private key、`.env` 或其他憑證。
+- 不得提交私人音檔、公司／客戶素材、私人檔名、真實個資或不必要的本機絕對路徑。
+- 不得將私人 Gmail、公司信箱或其他私人 email 寫入 commit message、Co-authored-by、文件或測試資料。
+- Git commit author 應使用 GitHub noreply email。
+- 若發現 secret 曾被 commit，即使目前已刪除，也視為可能外洩；必須先撤銷／rotate 該憑證，再評估清理 Git history。
+
 ## 開發節奏
 
 - 新功能先找最接近的既有模組延伸。

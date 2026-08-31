@@ -2,3 +2,20 @@
 /node_modules/
 /playwright-report/
 /test-results/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.npmrc
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local / OS artifacts
+*.log
+.DS_Store
+Thumbs.db
