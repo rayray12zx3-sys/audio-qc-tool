@@ -8,7 +8,7 @@
 
 - 維持瀏覽器端、可部署至 GitHub Pages 的 PR / AU 新手調音建議工具。
 - 正式支援環境改為 PC／桌面瀏覽器；手機僅維持基本可開啟，不列入必要驗收。
-- `main`／`origin/main` 目前基準為 commit `a1be238`（`v0.3.2`）；本機工作目錄已收斂。
+- `main`／`origin/main` 已包含 `v0.3.2` code commit `a1be238` 與 CI runtime maintenance commit `b8f84a4`；本機工作目錄已收斂。
 - 音訊判斷維持 `estimated`、`heuristic`、`suggested`、`starting point` 定位，不宣稱為標準級 QC 或取代人工聆聽。
 - 公開 repo 已補強 secrets／local configuration ignore 規則與憑證／個資提交規範；repository-local Git author 改用 GitHub noreply email。
 
@@ -34,7 +34,7 @@
 | `index.html`、`styles.css`、`tests/app.spec.mjs` | accessibility、安全輸出、桌面版面與 Chromium E2E |
 | `package.json`、`package-lock.json`、`README.md`、`docs/` | `0.3.2` 版本、可攜性說明與交接 |
 
-正式基準分支：`main`；`v0.3.2` release commit `a1be238` 已推送至 `origin/main`。Repository 目前為 private，GitHub Pages 因帳號方案限制未啟用，正式站回傳 404。
+正式基準分支：`main`；`v0.3.2` code commit `a1be238` 與 CI runtime maintenance commit `b8f84a4` 已推送至 `origin/main`。Repository 目前為 private，GitHub Pages 因帳號方案限制未啟用，正式站回傳 404。
 
 ## 驗證狀態
 
@@ -43,6 +43,7 @@
 - report self-test 涵蓋負相關建議抑制、BGM base gain 與 Duck Amount 只套用一次、LUFS／dB 單位、檔名 escape、自訂 `0`／無效值及 stale run 競態。
 - localhost in-app browser 於 `1440x900`、`1024x768` 複核 empty、loading、voice、bgm、both、error-voice、error-bgm、large-file、自訂錯誤、結果卡與 Ducking 區；皆無水平溢位或 console error/warn。
 - Playwright Chromium E2E 重新驗證 4 項通過（2.6 秒）：兩種桌面尺寸與 preview states、合成 WAV upload／換檔／大檔拒絕、accessibility／自訂驗證／長惡意檔名，以及 `file://` classic assets；GitHub Actions `Verify #10` 對 commit `a1be238` 完成且成功。
+- GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至官方目前使用的 `v7`；`Verify #12` 對 commit `b8f84a4` 成功（44 秒），annotations 為空，原 Node.js 20 棄用警告已消失。
 - 正式 GitHub Pages 已驗證為 404；GitHub Pages 設定顯示必須升級方案或將 repository 改為 public 才能啟用。
 - 本批未執行真實音檔聆聽或非 Chromium 瀏覽器驗證。
 

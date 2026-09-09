@@ -8,8 +8,8 @@ Compact record of project iterations. Keep entries factual and short.
 
 - Type: `release`, `validation`, `documentation`
 - Files: `audio-analysis.js`, `app.js`, `index.html`, `styles.css`, tests, version and handoff docs
-- Completed: Re-reviewed and released the existing objective-correctness, anti-phase protection, recommendation wording, accessibility and desktop UI candidate as commit `a1be238`; pushed it to `origin/main` with GitHub noreply author metadata. Updated the visible release date to 2026-09-09.
-- Verification: Both classic scripts passed `node --check`; report and DSP self-tests passed; four Playwright Chromium E2E cases passed at the required desktop sizes and relevant preview/upload/error/security states; `git diff --check` passed; GitHub Actions `Verify #10` completed successfully for `a1be238`.
+- Completed: Re-reviewed and released the existing objective-correctness, anti-phase protection, recommendation wording, accessibility and desktop UI candidate as commit `a1be238`; pushed it to `origin/main` with GitHub noreply author metadata. Updated the visible release date to 2026-09-09. Upgraded `actions/checkout` and `actions/setup-node` from `v4` to `v7` in commit `b8f84a4` to use the current Node.js 24 action runtime without changing the workflow's Node.js 22 test target.
+- Verification: Both classic scripts passed `node --check`; report and DSP self-tests passed; four Playwright Chromium E2E cases passed at the required desktop sizes and relevant preview/upload/error/security states; `git diff --check` passed. GitHub Actions `Verify #10` completed successfully for `a1be238`; `Verify #12` completed successfully for `b8f84a4` in 44 seconds with no annotations, confirming the Node.js 20 deprecation warning was removed.
 - Risk: The repository is currently private, and GitHub Pages settings require either a plan upgrade or making the repository public; the former public Pages URL returns 404. Old Git history still contains private/company identity metadata. Human listening and non-Chromium codec coverage remain incomplete.
 
 ## 2026-08-19
