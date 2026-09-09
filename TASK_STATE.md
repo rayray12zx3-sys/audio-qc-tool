@@ -45,7 +45,7 @@
 - Playwright Chromium E2E 重新驗證 4 項通過（2.9 秒）：兩種桌面尺寸與 preview states、合成 WAV upload／換檔／大檔拒絕、accessibility／自訂驗證／長惡意檔名，以及 `file://` classic assets；GitHub Actions `Verify #10` 為 rewrite 前同一 tree 的成功紀錄。
 - GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至官方目前使用的 `v7`；`Verify #12` 為 rewrite 前同一 workflow 的成功紀錄（44 秒），annotations 為空，原 Node.js 20 棄用警告已消失。
 - History rewrite 已覆蓋 17 個 reachable refs／36 個 commits；author／committer 非 GitHub `noreply` 計數為 0，reachable history 無 credential pattern、私人音檔路徑或 audio-like path；所有 refs 的 tree 保持不變。
-- `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 rewrite tip SHA 全部核對一致；文件提交後再以一般 fast-forward push 與 `git rev-parse`／`git ls-remote` 重新核對 `main`／`origin/main`。
+- `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 rewrite tip SHA 全部核對一致；文件提交後已以一般 fast-forward push 與 `git rev-parse`／`git ls-remote` 重新核對 `main`／`origin/main` 一致。
 - GitHub Pages source 已儲存為 `main`／`(root)`；公開網址已載入工具頁面，HTTP 200 通過 `index.html`、`styles.css`、`audio-analysis.js`、`app.js`，console error／warn 為 0。
 - 本批未執行真實音檔聆聽或非 Chromium 瀏覽器驗證。
 
