@@ -4,6 +4,14 @@ Compact record of project iterations. Keep entries factual and short.
 
 ## 2026-09-09
 
+### Git history privacy cleanup and GitHub Pages restoration
+
+- Type: `security`, `release`, `deployment`, `documentation`
+- Files: `TASK_STATE.md`, `docs/worklog.md`; no application source changes
+- Completed: Audited all reachable refs, created a verified local bundle backup, and rewrote the reachable repository history in an isolated mirror so all author／committer metadata uses the project GitHub `noreply` identity with the neutral name `audio-qc-tool maintainers`. Preserved file trees and commit messages. Force-pushed the rewritten origin branches with explicit leases, changed the repository to public, and enabled GitHub Pages from `main`／`(root)`.
+- Verification: 36 commits and 17 refs were checked; the rewritten history has zero non-`noreply` author／committer emails, zero credential-pattern matches, zero email-like content lines, and zero audio-like paths. All ref trees remained identical. Nine origin branches were force-pushed and their remote SHAs matched the candidate. The public Pages URL loaded `v0.3.2`; `index.html`, `styles.css`, `audio-analysis.js`, and `app.js` returned HTTP 200, with no captured console error or warning.
+- Risk: The local backup bundle／mirror and reflogs still contain the pre-rewrite history and must not be shared. GitHub may retain unreachable objects or caches for an undetermined period. Human listening and non-Chromium codec coverage remain incomplete.
+
 ### v0.3.2 release finalization
 
 - Type: `release`, `validation`, `documentation`

@@ -2,13 +2,13 @@
 
 這是本專案跨對話的持續狀態檔。新對話應先讀本檔，再以目前檔案與 Git 狀態核對；若兩者不一致，以實際狀態為準並修正本檔。
 
-最後更新：2026-09-09（v0.3.2 已推送，Pages 因 private repository 停用）
+最後更新：2026-09-09（v0.3.2 history 已匿名化，repository 已公開，Pages 已恢復）
 
 ## 目前目標
 
 - 維持瀏覽器端、可部署至 GitHub Pages 的 PR / AU 新手調音建議工具。
 - 正式支援環境改為 PC／桌面瀏覽器；手機僅維持基本可開啟，不列入必要驗收。
-- `main`／`origin/main` 已包含 `v0.3.2` code commit `a1be238` 與 CI runtime maintenance commit `b8f84a4`；本機工作目錄已收斂。
+- `main`／`origin/main` 已包含 history rewrite 後的 `v0.3.2` code commit `ce5b22c` 與 CI runtime maintenance commit `810424b`；目前 HEAD 為 `1f918fc`，本機工作目錄已收斂。
 - 音訊判斷維持 `estimated`、`heuristic`、`suggested`、`starting point` 定位，不宣稱為標準級 QC 或取代人工聆聽。
 - 公開 repo 已補強 secrets／local configuration ignore 規則與憑證／個資提交規範；repository-local Git author 改用 GitHub noreply email。
 
@@ -34,7 +34,7 @@
 | `index.html`、`styles.css`、`tests/app.spec.mjs` | accessibility、安全輸出、桌面版面與 Chromium E2E |
 | `package.json`、`package-lock.json`、`README.md`、`docs/` | `0.3.2` 版本、可攜性說明與交接 |
 
-正式基準分支：`main`；`v0.3.2` code commit `a1be238` 與 CI runtime maintenance commit `b8f84a4` 已推送至 `origin/main`。Repository 目前為 private，GitHub Pages 因帳號方案限制未啟用，正式站回傳 404。
+正式基準分支：`main`；history rewrite 後的 `v0.3.2` code commit `ce5b22c`、CI runtime maintenance commit `810424b` 與目前 HEAD `1f918fc` 已推送至 `origin/main`。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
 
 ## 驗證狀態
 
@@ -42,16 +42,17 @@
 - DSP self-test 涵蓋同相／反相寬度、零長度有限值、399.98 ms／400 ms loudness 連續、Hann 正規化與最後完整 STFT frame。
 - report self-test 涵蓋負相關建議抑制、BGM base gain 與 Duck Amount 只套用一次、LUFS／dB 單位、檔名 escape、自訂 `0`／無效值及 stale run 競態。
 - localhost in-app browser 於 `1440x900`、`1024x768` 複核 empty、loading、voice、bgm、both、error-voice、error-bgm、large-file、自訂錯誤、結果卡與 Ducking 區；皆無水平溢位或 console error/warn。
-- Playwright Chromium E2E 重新驗證 4 項通過（2.6 秒）：兩種桌面尺寸與 preview states、合成 WAV upload／換檔／大檔拒絕、accessibility／自訂驗證／長惡意檔名，以及 `file://` classic assets；GitHub Actions `Verify #10` 對 commit `a1be238` 完成且成功。
-- GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至官方目前使用的 `v7`；`Verify #12` 對 commit `b8f84a4` 成功（44 秒），annotations 為空，原 Node.js 20 棄用警告已消失。
-- 正式 GitHub Pages 已驗證為 404；GitHub Pages 設定顯示必須升級方案或將 repository 改為 public 才能啟用。
+- Playwright Chromium E2E 重新驗證 4 項通過（2.9 秒）：兩種桌面尺寸與 preview states、合成 WAV upload／換檔／大檔拒絕、accessibility／自訂驗證／長惡意檔名，以及 `file://` classic assets；GitHub Actions `Verify #10` 為 rewrite 前同一 tree 的成功紀錄。
+- GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至官方目前使用的 `v7`；`Verify #12` 為 rewrite 前同一 workflow 的成功紀錄（44 秒），annotations 為空，原 Node.js 20 棄用警告已消失。
+- History rewrite 已覆蓋 17 個 reachable refs／36 個 commits；author／committer 非 GitHub `noreply` 計數為 0，reachable history 無 credential pattern、私人音檔路徑或 audio-like path；所有 refs 的 tree 保持不變。
+- `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 SHA 全部核對一致；本機 `main`／`origin/main` 已對齊 `1f918fc`。
+- GitHub Pages source 已儲存為 `main`／`(root)`；公開網址已載入工具頁面，HTTP 200 通過 `index.html`、`styles.css`、`audio-analysis.js`、`app.js`，console error／warn 為 0。
 - 本批未執行真實音檔聆聽或非 Chromium 瀏覽器驗證。
 
 ## 下一步
 
-1. 由使用者決定是否將 repository 改回 public 以恢復免費 GitHub Pages；舊 Git history 個資仍存在，公開前應先確認可接受性或另案重寫歷史。
-2. 由使用者對真實樣本完成人工聆聽，標記工具建議的 matched、missed、overreacted，再決定是否調整主觀門檻。
-3. 若要處理長檔或完整成品 QC，再另案評估 Worker、分批處理／取消及 Final Mix QC；不要與本批客觀修正綁在一起。
+1. 由使用者對真實樣本完成人工聆聽，標記工具建議的 matched、missed、overreacted，再決定是否調整主觀門檻。
+2. 若要處理長檔或完整成品 QC，再另案評估 Worker、分批處理／取消及 Final Mix QC；不要與本批客觀修正綁在一起。
 
 ## 風險與限制
 
@@ -61,10 +62,10 @@
 - 部分格式或瀏覽器可能無法快速提供 metadata；此批選擇安全拒絕而非解碼原始大檔，使用者需改輸出代表片段。
 - mono downmix 對反相或複雜多聲道素材可能抵消頻段與噪音能量；目前會抑制相關建議，但尚未提供逐聲道頻譜，>2 聲道仍只有 caveat。
 - 自動化 E2E 只驗證 Chromium；其他桌面瀏覽器與 codec 支援仍可能不同。
-- `v0.3.2` 已通過 CI 並推送，但 repository 為 private，免費帳號無法啟用該 repository 的 GitHub Pages；正式站目前不可用。
+- `v0.3.2` 的程式 tree 已通過本地驗證並完成 history rewrite／force push；repository 已公開，GitHub Pages 已從 `main`／`(root)` 建置並可載入公開網址。
 - 手機不再是正式支援環境，未執行本批手機版 smoke check。
 - `真實音檔/` 及私人來源檔不可提交或上傳。
-- 目前 tracked files 未發現明顯 API Key、token 或 password；舊 Git history 仍含私人／公司 email 與姓名／部門資訊，待另案確認後處理，未進行 history rewrite 或 force push。
+- 目前 tracked files 與 reachable rewritten history 未發現明顯 API Key、token、password、email-like content 或私人音檔路徑；原始 pre-rewrite history 僅保留在本機 reflog／暫存 backup bundle 與 mirror，這些檔案不可分享或提交。GitHub 對遠端 unreachable object／cache 的清理時間不由本 repo 控制。
 
 ## 維護方式
 
