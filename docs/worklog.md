@@ -2,6 +2,16 @@
 
 Compact record of project iterations. Keep entries factual and short.
 
+## 2026-08-19
+
+### v0.3.2 objective correctness and desktop UI hardening candidate
+
+- Type: `audio logic`, `UI-only`, `accessibility`, `test`
+- Files: `audio-analysis.js`, `app.js`, `index.html`, `styles.css`, `scripts/report-self-test.mjs`, `tests/`, version and handoff docs
+- Completed: Corrected short-block loudness continuity, True Peak endpoint coverage, final complete STFT-frame inclusion, Hann coherent-gain normalization, finite zero-length results, and stereo-width mapping for anti-phase material. Suppressed mono-downmix-derived recommendations when stereo correlation is negative; clarified PLR-like, noise-proxy, True Peak, limiter and BGM-masking language; separated LUFS targets from dB gain; and removed the duplicated BGM duck attenuation. Added safe filename rendering, valid custom zero handling, explicit validation, labelled controls and regions, real effect-chain buttons, stronger contrast, and long-filename containment. No listening-dependent recommendation threshold was tuned.
+- Verification: Both classic scripts passed `node --check`; report and DSP self-tests passed the new deterministic and integration regressions; four Chromium E2E cases passed desktop previews, upload/replacement/rejection, accessibility/security validation, and direct `file://` loading; `git diff --check` passed. In-app browser smoke covered eight states at `1440x900` and `1024x768`, custom validation, result cards, and the Ducking section without horizontal overflow or console error/warn.
+- Risk: Estimated True Peak remains a 4x Catmull-Rom approximation; analysis is synchronous once decoding begins and cannot be cancelled. Human listening, non-Chromium codec coverage, CI, and the published Pages site were not verified. This candidate is not committed or published.
+
 ## 2026-08-13
 
 ### v0.3.1 static asset split

@@ -75,16 +75,16 @@ function integratedLoudness(channels, sr) {
   const blockSize = Math.round(0.4 * sr); // 400ms
   const hopSize   = Math.round(0.1 * sr); // 100ms（75% overlap）
 
-  // 素材過短（< 400ms），無法分區塊，退回全域 RMS
+  const LUFS_OFFSET = -0.691; // BS.1770 常用校正常數；此實作仍為近似估算。
+  // 素材過短（< 400ms），無法分區塊，退回全域 RMS。保留與區塊路徑相同的 LUFS offset。
   if (len < blockSize) {
     let ms = 0;
     for (const channel of filtered) {
       for (let i = 0; i < len; i++) ms += channel[i] * channel[i];
     }
-    return toDb(Math.sqrt(ms / Math.max(len, 1)));
+    return LUFS_OFFSET + 10 * Math.log10(Math.max(ms / Math.max(len, 1), 1e-12));
   }
 
-  const LUFS_OFFSET = -0.691; // BS.1770 常用校正常數；此實作仍為近似估算。
   const blocks = [];
   for (let start = 0; start + blockSize <= len; start += hopSize) {
     let ms = 0;
@@ -114,8 +114,11 @@ function truePeak(channel) {
   let mx = 0;
   // 先納入所有原始 sample，讓零長度與極短素材也有可預期結果。
   for (let i = 0; i < n; i++) mx = Math.max(mx, Math.abs(channel[i]));
-  for (let i = 1; i < n - 2; i++) {
-    const p0 = channel[i-1], p1 = channel[i], p2 = channel[i+1], p3 = channel[i+2];
+  // 端點採相鄰 sample 延伸，讓第一與最後一個 interval 也納入 Estimated True Peak。
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = channel[i > 0 ? i - 1 : i];
+    const p1 = channel[i], p2 = channel[i + 1];
+    const p3 = channel[i + 2 < n ? i + 2 : i + 1];
     // t = 0.25 / 0.5 / 0.75
     for (let k = 1; k <= 3; k++) {
       const t = k * 0.25, t2 = t * t, t3 = t2 * t;
@@ -164,7 +167,8 @@ function fft(re, im) {
 // ===== STFT + 1/3 Octave 頻譜分析 =====
 function stftSpectrum(mono, sr) {
   const N = 2048, hop = 512, maxFr = 1200;
-  const totalFr = Math.max(1, Math.floor((mono.length - N) / hop));
+  // 最後一個剛好完整的 frame 也必須被納入。
+  const totalFr = mono.length >= N ? Math.floor((mono.length - N) / hop) + 1 : 0;
   const step = Math.max(1, Math.floor(totalFr / maxFr));
   const hann = new Float32Array(N);
   for (let i = 0; i < N; i++) hann[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (N - 1)));
@@ -199,11 +203,14 @@ function stftSpectrum(mono, sr) {
   const tot = energy.reduce((s, v) => s + v, 0) || 1e-12;
   const ratio = energy.map(e => e / tot);
 
-  // P_Sib：5-8kHz 最大幀峰值 → 近似 dBFS（Hann 窗 N/2 正規化）
+  // P_Sib：5-8kHz 最大幀峰值 → 近似 dBFS。
+  // Hann coherent gain 以實際窗和校正；bin-centered sine 的單邊 FFT 幅度為 A * sum(hann) / 2。
   const sibLo = Math.floor(5000 / bHz), sibHi = Math.min(N/2-1, Math.ceil(8000 / bHz));
   let sibMaxP = 1e-24;
   for (let k = sibLo; k <= sibHi; k++) if (sibPeak[k] > sibMaxP) sibMaxP = sibPeak[k];
-  const pSib = 10 * Math.log10(sibMaxP / (N * N / 4 + 1e-24));
+  let hannSum = 0;
+  for (let i = 0; i < N; i++) hannSum += hann[i];
+  const pSib = 10 * Math.log10(sibMaxP / (hannSum * hannSum / 4 + 1e-24));
 
   // SFM 8-16kHz：幾何平均 / 算術平均（=1 為純白噪，<0.35 表示有諧波結構）
   const airLo = Math.floor(8000 / bHz), airHi = Math.min(N/2-1, Math.ceil(16000 / bHz));
@@ -256,6 +263,8 @@ function analyzeAudio(buf) {
     for (let j = i; j < e; j++) s += mono[j] * mono[j];
     fDbs.push(toDb(Math.sqrt(s / (e - i))));
   }
+  // 空 buffer 沒有分析幀；以有限的靜音值維持完整結果 shape。
+  if (fDbs.length === 0) fDbs.push(toDb(0));
   const sorted = [...fDbs].sort((a, b) => a - b);
   const noiseFloor = pctile(sorted, 0.10);
   const lra  = pctile(sorted, 0.95) - pctile(sorted, 0.10);
@@ -287,11 +296,12 @@ function analyzeAudio(buf) {
     for (let i = 0; i < len; i += step) {
       sL+=L[i];sR+=R[i];sLL+=L[i]*L[i];sRR+=R[i]*R[i];sLR+=L[i]*R[i];n++;
     }
-    const mL=sL/n, mR=sR/n;
-    const cov=sLR/n-mL*mR, vL=sLL/n-mL*mL, vR=sRR/n-mR*mR;
+    const mL=sL/Math.max(n, 1), mR=sR/Math.max(n, 1);
+    const cov=sLR/Math.max(n, 1)-mL*mR, vL=sLL/Math.max(n, 1)-mL*mL, vR=sRR/Math.max(n, 1)-mR*mR;
     const denom=Math.sqrt(vL*vR);
-    const corr = denom > 1e-9 ? cov/denom : 1;
-    stereo = { corr, width: 1 - Math.abs(corr) };
+    const corr = clamp(denom > 1e-9 ? cov/denom : 1, -1, 1);
+    // +1 代表相同 mono、-1 代表完整反相；兩者不應同時被視為「窄」。
+    stereo = { corr, width: (1 - corr) / 2 };
   }
   // STFT + 1/3 Octave 頻譜
   const { ratio: specRatio, energy: specEnergy, pSib, sfm8k } = stftSpectrum(mono, sr);
@@ -316,7 +326,7 @@ function analyzeAudio(buf) {
   return {
     sr, ch, dur: buf.duration,
     smpPkDb, tpDb, kwRms, noiseFloor, actRms, overallRms,
-    snr, crest, lra, nearPeakCount, dcOffset, silentRatio, zcr,
+    snr, crest, peakToLoudness: crest, lra, nearPeakCount, dcOffset, silentRatio, zcr,
     stereo, bands, specRatio, pSib, sfm8k,
     channelCaveat: ch > 2 ? '超過雙聲道：Estimated Integrated Loudness 採各聲道等權加總；頻譜、噪音與波形仍由平均 mono downmix 衍生。' : undefined
   };

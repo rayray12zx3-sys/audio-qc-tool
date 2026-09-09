@@ -53,6 +53,7 @@ class ElementStub {
   constructor(id = '') {
     this.id = id;
     this.dataset = {};
+    this.attributes = {};
     this.style = { setProperty() {} };
     this.classList = new ClassListStub();
     this.parentElement = { clientWidth: 800 };
@@ -77,7 +78,8 @@ class ElementStub {
   }
 
   addEventListener() {}
-  setAttribute() {}
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+  getAttribute(name) { return this.attributes[name]; }
   click() {}
   scrollIntoView() {}
 
@@ -176,7 +178,7 @@ getElement('copyBtn').innerHTML = copyButtonIdleHtml;
 
 try {
   vm.runInContext(fs.readFileSync(audioAnalysisPath, 'utf8'), context, { filename: audioAnalysisPath });
-  vm.runInContext(`${fs.readFileSync(appPath, 'utf8')}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, buildVoiceFx, makeTestAnalysis, diagCommon, render, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, inspectAudioFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: appPath });
+  vm.runInContext(`${fs.readFileSync(appPath, 'utf8')}\nglobalThis.__appTest = { appVersion: APP_VERSION, appUpdatedAt: APP_UPDATED_AT, buildReportData, buildReport, buildVoiceFx, buildBgmFx, buildMixFx, bgmFlags, voiceFlags, makeTestAnalysis, diagCommon, render, renderTrackSummary, applyCustomPlatform, escapeHtml, clearTrackState, copyReport, showCopyButtonFeedback, handleFile, inspectAudioFile, beginAnalysisRun, isCurrentAnalysisRun, finishAnalysisRun, setAudioContext: value => { aCtx = value; }, getTrack: trackId => S[trackId] };`, context, { filename: appPath });
   const result = context.window.runReportSelfTest?.();
   const appTest = context.__appTest;
 
@@ -239,7 +241,7 @@ try {
   }
   const gainAnalysis = appTest.makeTestAnalysis({ tpDb: -0.2, kwRms: -30, smpPkDb: -0.2 });
   const clipGain = appTest.buildVoiceFx(gainAnalysis).find(effect => effect.id === 'clipgain');
-  if (!clipGain?.note?.includes('削波保護已啟動')) {
+  if (!clipGain?.note?.includes('Estimated True Peak 保守上限')) {
     interactionFailures.push('channel-safe true peak did not limit Clip Gain guidance');
   }
 
@@ -268,6 +270,52 @@ try {
   const phaseRiskReport = appTest.buildReport();
   if (!phaseRiskReport.includes(channelCaveat) || !phaseRiskReport.includes('mono-derived 指標的信心降低')) {
     interactionFailures.push('copied report is missing multichannel or negative-correlation caveat');
+  }
+
+  const antiPhase = appTest.makeTestAnalysis({
+    stereo: { corr: -0.8, width: 0.05 },
+    bands: { ...appTest.makeTestAnalysis().bands, vocalOverlap: 0.8, lowMid: 0.8, mid: 0.8 }
+  });
+  const antiPhaseBgm = appTest.buildBgmFx(antiPhase);
+  if (antiPhaseBgm.some(effect => ['stereoexp', 'maskeq', 'hp', 'bgmdyn'].includes(effect.id)) || appTest.bgmFlags(antiPhase).stereo) {
+    interactionFailures.push('anti-phase BGM incorrectly suggested mono-derived processing or Stereo Expander');
+  }
+  const phaseVoiceFlags = appTest.voiceFlags(antiPhase);
+  if (phaseVoiceFlags.denoise || phaseVoiceFlags.eq || phaseVoiceFlags.deEsser) {
+    interactionFailures.push('anti-phase voice incorrectly suggested mono-derived Noise/EQ/DeEsser processing');
+  }
+
+  const mixVoice = appTest.makeTestAnalysis({ kwRms: -18 });
+  const mixBgm = appTest.makeTestAnalysis({ kwRms: -12 });
+  const duck = appTest.buildMixFx(mixVoice, mixBgm)[0];
+  const gain = duck.params.find(row => row[0] === 'BGM Gain 調整量')?.[1];
+  const duckAmount = duck.params.find(row => row[0] === 'Duck Amount')?.[1];
+  if (gain !== '-6.0 dB' || !duckAmount?.includes('建議 -17 dB') || !duck.params.find(row => row[0] === 'BGM Gain 調整量')?.[2].includes('-18.0 LUFS')) {
+    interactionFailures.push('mix guidance did not keep absolute loudness in LUFS and apply relative ducking once in dB');
+  }
+
+  appTest.render('voice', appTest.makeTestAnalysis(), '<img src=x onerror=alert(1)>.wav', testBuffer);
+  if (elements.get('sum-voice').innerHTML.includes('<img src=x') || !elements.get('sum-voice').innerHTML.includes('&lt;img')) {
+    interactionFailures.push('filename was inserted into result innerHTML without escaping');
+  }
+
+  const customLufs = elements.get('cLufs');
+  const customTp = elements.get('cTp');
+  getElement('platformSel').value = 'custom';
+  customLufs.valueAsNumber = 0; customTp.valueAsNumber = 0;
+  if (!appTest.applyCustomPlatform() || !appTest.buildReportData().meta.targetLufs.startsWith('0 LUFS')) {
+    interactionFailures.push('custom numeric zero was not retained as a valid LUFS value');
+  }
+  customLufs.valueAsNumber = Number.NaN;
+  if (appTest.applyCustomPlatform() || elements.get('customError').hidden || customLufs.getAttribute('aria-invalid') !== 'true') {
+    interactionFailures.push('invalid custom numeric input did not expose an accessible visible error');
+  }
+  if (!getElement('copyBtn').disabled) {
+    interactionFailures.push('invalid custom numeric input did not disable report copying');
+  }
+  customLufs.valueAsNumber = -16;
+  if (!appTest.applyCustomPlatform()) {
+    interactionFailures.push('restoring a valid custom numeric input did not re-enable normal state');
   }
 
   const copyBtn = elements.get('copyBtn');
@@ -315,7 +363,7 @@ try {
   await newResultRun;
   staleResult.resolve(audioBuffer);
   await oldResultRun;
-  if (appTest.getTrack('voice')?.filename !== 'new-result.wav' || elements.get('st-voice').textContent) {
+  if (appTest.getTrack('voice')?.filename !== 'new-result.wav' || !elements.get('st-voice').textContent.includes('分析完成')) {
     interactionFailures.push('stale completed analysis overwrote the newer result or status');
   }
 
@@ -325,7 +373,7 @@ try {
   await newErrorRun;
   staleError.reject(new Error('old decode failed'));
   await oldErrorRun;
-  if (appTest.getTrack('voice')?.filename !== 'new-error.wav' || elements.get('st-voice').textContent) {
+  if (appTest.getTrack('voice')?.filename !== 'new-error.wav' || !elements.get('st-voice').textContent.includes('分析完成')) {
     interactionFailures.push('stale analysis error overwrote the newer result or status');
   }
   if (objectUrls.created !== objectUrls.revoked) {

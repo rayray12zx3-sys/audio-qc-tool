@@ -30,7 +30,7 @@
 <!-- 目標發布平台 & 格式選擇 -->
 <div class="trange">
   <div class="trange-row" style="flex-wrap:wrap;gap:10px;">
-    <div class="trange-lbl">常用響度起始目標</div>
+    <label class="trange-lbl" for="platformSel">常用響度起始目標</label>
     <select id="platformSel" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;">
       <option value="youtube" selected>Online / Streaming（−14 LUFS / −1.0 dBTP）</option>
       <option value="podcast">Spoken / Podcast（−16 LUFS / −1.0 dBTP）</option>
@@ -38,21 +38,22 @@
       <option value="broadcast">Broadcast-style reference（−23 LUFS / −2.0 dBTP）</option>
       <option value="custom">自訂</option>
     </select>
-    <div class="trange-lbl" style="margin-left:8px;">預期輸出格式</div>
+    <label class="trange-lbl" for="outFmtSel" style="margin-left:8px;">預期輸出格式</label>
     <select id="outFmtSel" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;">
       <option value="wav" selected>無損 PCM / WAV</option>
       <option value="lossy">有損壓縮 MP3 / AAC</option>
     </select>
-    <div class="trange-lbl" style="margin-left:8px;">內容類型</div>
+    <label class="trange-lbl" for="duckTypeSel" style="margin-left:8px;">內容類型</label>
     <select id="duckTypeSel" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;">
       <option value="vlog" selected>Vlog / 輕鬆內容</option>
       <option value="podcast">Podcast / 訪談</option>
     </select>
   </div>
   <div class="custom-row" id="customRow">
-    目標 LUFS：<input type="number" id="cLufs" value="-16" min="-60" max="0"> dBFS
-    &nbsp;True Peak：<input type="number" id="cTp" value="-1.0" min="-10" max="0" step="0.5"> dBTP
+    <label for="cLufs">目標 LUFS：</label><input type="number" id="cLufs" value="-16" min="-60" max="0" step="0.1" aria-describedby="customError"> LUFS
+    <label for="cTp">True Peak：</label><input type="number" id="cTp" value="-1.0" min="-10" max="0" step="0.5" aria-describedby="customError"> dBTP
   </div>
+  <div class="input-error" id="customError" role="alert" aria-live="polite" hidden></div>
   <div class="trange-info">
     <span>目標：<b id="rDisp">−14 LUFS</b></span>
     <span>True Peak 上限：<b id="mDisp">−1.0 dBTP</b></span>
@@ -80,7 +81,7 @@
   </div>
   <div class="filebar" id="fb-voice"><span><b id="fn-voice"></b> <span id="fm-voice"></span></span><button class="rl" data-t="fi-voice">重新選擇</button></div>
   <div class="status" id="st-voice" role="status" aria-live="polite"></div>
-  <section class="result" id="res-voice">
+  <section class="result" id="res-voice" role="region" aria-label="人聲分析結果">
     <div class="blk">總結建議</div>
     <div class="summary-panel" id="sum-voice"></div>
     <div class="blk">估算數據</div>
@@ -110,7 +111,7 @@
   </div>
   <div class="filebar" id="fb-bgm"><span><b id="fn-bgm"></b> <span id="fm-bgm"></span></span><button class="rl" data-t="fi-bgm">重新選擇</button></div>
   <div class="status" id="st-bgm" role="status" aria-live="polite"></div>
-  <section class="result" id="res-bgm">
+  <section class="result" id="res-bgm" role="region" aria-label="BGM 分析結果">
     <div class="blk">總結建議</div>
     <div class="summary-panel" id="sum-bgm"></div>
     <div class="blk">估算數據</div>

@@ -29,6 +29,9 @@ For moving the project to another computer, copy the whole project folder when p
 Include:
 
 - `index.html`
+- `styles.css`
+- `audio-analysis.js`
+- `app.js`
 - `README.md`
 - `AGENTS.md`
 - `docs/`
@@ -40,7 +43,7 @@ Include `.git/` only if the target computer should keep the repository history, 
 
 ## Minimal Runtime
 
-The tool itself is a static browser page. For basic use, `index.html` is enough.
+The tool itself is a static browser page. For basic use, keep these four relative-path runtime files together: `index.html`, `styles.css`, `audio-analysis.js`, and `app.js`.
 
 For maintenance and verification, keep the helper files too:
 

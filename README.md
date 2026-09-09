@@ -44,7 +44,7 @@ npm run test:e2e
 - `smoke:manual`：列出 preview smoke check URL；不會自動開瀏覽器。
 - `test:report`：在 Node 環境執行既有 report self-test。
 - `test:dsp`：驗證 mono、stereo、多聲道與極短音訊的安全量測行為。
-- `test:e2e`：以 Chromium 覆蓋 empty、loading、preview、報告複製及 console 基本回歸。
+- `test:e2e`：以 Chromium-based Playwright 瀏覽器覆蓋 empty、loading、preview、報告複製及 console 基本回歸；這是目前自動驗收的瀏覽器範圍。
 
 首次執行 E2E 時需安裝 Chromium：
 

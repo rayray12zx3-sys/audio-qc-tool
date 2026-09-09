@@ -1,7 +1,7 @@
 :root{
   --bg:#0f1115; --panel:#1a1d24; --panel-2:#20242c; --panel-3:#262a33;
   --border:#2a2e37; --border-soft:#1e2128;
-  --text:#e8eaed; --text-dim:#8b92a3; --text-faint:#4e5568;
+  --text:#e8eaed; --text-dim:#aab1c2; --text-faint:#858da0;
   --accent:#ffb238; --voice:#5ec9a3; --bgm:#7aa2ff;
   --card:#20242c;
   --good:#5ec9a3; --warn:#ffb238; --bad:#ff5c5c;
@@ -73,6 +73,7 @@ h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0;}
   border-radius:5px;padding:4px 8px;width:60px;font-family:var(--mono);font-size:12px;text-align:center;
 }
 .custom-row input:focus{outline:none;border-color:var(--accent);}
+.input-error{margin-top:8px;color:var(--warn);font-size:12px;}
 .trange-info{margin-top:10px;font-family:var(--mono);font-size:11.5px;color:var(--text-dim);display:flex;gap:20px;flex-wrap:wrap;}
 .trange-info b{color:var(--text);}
 .trange-info .note{color:var(--text-faint);}
@@ -100,9 +101,10 @@ h1{font-size:20px;font-weight:700;letter-spacing:.01em;margin:0;}
 .chain-flow{display:flex;align-items:center;gap:0;overflow-x:auto;max-width:100%;padding-bottom:4px;}
 .chain-node{
   flex-shrink:0;border:1px solid var(--border);border-radius:6px;padding:6px 11px;
-  font-family:var(--mono);font-size:11px;color:var(--text-faint);
+  font-family:var(--mono);font-size:11px;color:var(--text-faint);line-height:normal;
   background:var(--panel-2);white-space:nowrap;
 }
+.chain-node[type=button]{appearance:none;}
 .chain-node.active{
   border-color:var(--accent-track);color:var(--accent-track);
   background:var(--panel);cursor:pointer;
@@ -131,9 +133,10 @@ input[type=file]{display:none;}
 }
 .filebar.show{display:flex;}
 .filebar b{color:var(--text);font-weight:600;}
+.filebar > span{min-width:0;overflow-wrap:anywhere;word-break:break-word;}
 .filebar button{
   background:none;border:1px solid var(--border);color:var(--text-dim);
-  border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:var(--sans);
+  border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:var(--sans);flex-shrink:0;
 }
 .filebar button:hover{color:var(--text);border-color:var(--text-dim);}
 .status{font-size:12px;color:var(--accent);margin-top:12px;display:none;font-family:var(--mono);}

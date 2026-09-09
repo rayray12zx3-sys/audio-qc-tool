@@ -38,6 +38,9 @@ test('desktop empty/loading/preview/copy and keyboard interactions have no conso
   await expect(page.locator('#loadingOverlay')).toHaveClass(/show/);
   await page.goto('/?preview=both');
   await expect(page.locator('#res-voice')).toHaveClass(/show/);
+  await expect(page.locator('#chain-voice .chain-arr')).toHaveCount(5);
+  await expect(page.locator('#chain-bgm .chain-arr')).toHaveCount(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
   await page.locator('#copyBtn').click();
   await expect(page.locator('#copyBtn')).toContainText(/已複製|複製失敗/);
   expect(errors).toEqual([]);
@@ -62,12 +65,40 @@ test('upload replacement and large-file rejection are safe', async ({ page }) =>
   await expect(page.locator('#res-voice')).not.toHaveClass(/show/);
 });
 
+test('accessible labels, custom validation, long names, and filename injection remain safe', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByLabel('常用響度起始目標')).toBeVisible();
+  await expect(page.getByLabel('預期輸出格式')).toBeVisible();
+  await expect(page.getByLabel('內容類型')).toBeVisible();
+  await expect(page.locator('#res-voice')).toHaveAttribute('aria-label', '人聲分析結果');
+  await page.locator('#platformSel').selectOption('custom');
+  await page.locator('#cLufs').fill('0');
+  await page.locator('#cTp').fill('0');
+  await expect(page.locator('#rDisp')).toContainText('0 LUFS');
+  await page.locator('#cLufs').fill('');
+  await expect(page.locator('#customError')).toBeVisible();
+  await expect(page.locator('#cLufs')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#cTp')).toHaveAttribute('aria-invalid', 'false');
+
+  const maliciousLongName = `<img src=x onerror=alert(1)>-${'very-long-name-'.repeat(16)}.wav`;
+  await chooseVoiceWithKeyboard(page, { name: maliciousLongName, mimeType: 'audio/wav', buffer: wav });
+  await expect(page.locator('#fn-voice')).toHaveText(maliciousLongName);
+  await expect(page.locator('#sum-voice img')).toHaveCount(0);
+  await expect(page.locator('#st-voice')).toContainText('分析完成');
+  await expect(page.locator('#copyBtn')).toBeDisabled();
+  await page.locator('#cLufs').fill('-16');
+  await expect(page.locator('#customError')).toBeHidden();
+  await expect(page.locator('#copyBtn')).toBeEnabled();
+  await page.locator('#chain-voice button.chain-node.active').first().press('Enter');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+});
+
 test('index.html still opens directly with classic assets', async ({ page }) => {
   const errors = [];
   page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(pathToFileURL(path.join(process.cwd(), 'index.html')).href);
-  await expect(page.locator('#versionBadge')).toContainText('v0.3.1');
+  await expect(page.locator('#versionBadge')).toContainText('v0.3.2');
   await expect(page.locator('#copyBtn')).toBeDisabled();
   await expect(page.locator('link[href="styles.css"]')).toHaveCount(1);
   expect(await page.evaluate(() => typeof window.AudioAnalysis?.analyzeAudio)).toBe('function');
