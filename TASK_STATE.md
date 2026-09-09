@@ -8,7 +8,7 @@
 
 - 維持瀏覽器端、可部署至 GitHub Pages 的 PR / AU 新手調音建議工具。
 - 正式支援環境改為 PC／桌面瀏覽器；手機僅維持基本可開啟，不列入必要驗收。
-- `main`／`origin/main` 已包含 history rewrite 後的 `v0.3.2` code commit `ce5b22c` 與 CI runtime maintenance commit `810424b`；目前 HEAD 為 `1f918fc`，本機工作目錄已收斂。
+- `main`／`origin/main` 已包含 history rewrite 後的 `v0.3.2` code commit `ce5b22c` 與 CI runtime maintenance commit `810424b`；history rewrite release tip 為 `1f918fc`，本次交接文件提交追加其上，本機工作目錄已收斂。
 - 音訊判斷維持 `estimated`、`heuristic`、`suggested`、`starting point` 定位，不宣稱為標準級 QC 或取代人工聆聽。
 - 公開 repo 已補強 secrets／local configuration ignore 規則與憑證／個資提交規範；repository-local Git author 改用 GitHub noreply email。
 
@@ -34,7 +34,7 @@
 | `index.html`、`styles.css`、`tests/app.spec.mjs` | accessibility、安全輸出、桌面版面與 Chromium E2E |
 | `package.json`、`package-lock.json`、`README.md`、`docs/` | `0.3.2` 版本、可攜性說明與交接 |
 
-正式基準分支：`main`；history rewrite 後的 `v0.3.2` code commit `ce5b22c`、CI runtime maintenance commit `810424b` 與目前 HEAD `1f918fc` 已推送至 `origin/main`。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
+正式基準分支：`main`；history rewrite 後的 `v0.3.2` code commit `ce5b22c`、CI runtime maintenance commit `810424b` 與 release tip `1f918fc` 已推送至 `origin/main`，交接文件變更追加於其上。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
 
 ## 驗證狀態
 
@@ -45,7 +45,7 @@
 - Playwright Chromium E2E 重新驗證 4 項通過（2.9 秒）：兩種桌面尺寸與 preview states、合成 WAV upload／換檔／大檔拒絕、accessibility／自訂驗證／長惡意檔名，以及 `file://` classic assets；GitHub Actions `Verify #10` 為 rewrite 前同一 tree 的成功紀錄。
 - GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至官方目前使用的 `v7`；`Verify #12` 為 rewrite 前同一 workflow 的成功紀錄（44 秒），annotations 為空，原 Node.js 20 棄用警告已消失。
 - History rewrite 已覆蓋 17 個 reachable refs／36 個 commits；author／committer 非 GitHub `noreply` 計數為 0，reachable history 無 credential pattern、私人音檔路徑或 audio-like path；所有 refs 的 tree 保持不變。
-- `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 SHA 全部核對一致；本機 `main`／`origin/main` 已對齊 `1f918fc`。
+- `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 rewrite tip SHA 全部核對一致；文件提交後再以一般 fast-forward push 與 `git rev-parse`／`git ls-remote` 重新核對 `main`／`origin/main`。
 - GitHub Pages source 已儲存為 `main`／`(root)`；公開網址已載入工具頁面，HTTP 200 通過 `index.html`、`styles.css`、`audio-analysis.js`、`app.js`，console error／warn 為 0。
 - 本批未執行真實音檔聆聽或非 Chromium 瀏覽器驗證。
 
