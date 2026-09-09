@@ -2,6 +2,16 @@
 
 Compact record of project iterations. Keep entries factual and short.
 
+## 2026-09-09
+
+### v0.3.2 release finalization
+
+- Type: `release`, `validation`, `documentation`
+- Files: `audio-analysis.js`, `app.js`, `index.html`, `styles.css`, tests, version and handoff docs
+- Completed: Re-reviewed and released the existing objective-correctness, anti-phase protection, recommendation wording, accessibility and desktop UI candidate as commit `a1be238`; pushed it to `origin/main` with GitHub noreply author metadata. Updated the visible release date to 2026-09-09.
+- Verification: Both classic scripts passed `node --check`; report and DSP self-tests passed; four Playwright Chromium E2E cases passed at the required desktop sizes and relevant preview/upload/error/security states; `git diff --check` passed; GitHub Actions `Verify #10` completed successfully for `a1be238`.
+- Risk: The repository is currently private, and GitHub Pages settings require either a plan upgrade or making the repository public; the former public Pages URL returns 404. Old Git history still contains private/company identity metadata. Human listening and non-Chromium codec coverage remain incomplete.
+
 ## 2026-08-19
 
 ### v0.3.2 objective correctness and desktop UI hardening candidate
