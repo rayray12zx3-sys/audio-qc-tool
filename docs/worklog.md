@@ -2,6 +2,16 @@
 
 Compact record of project iterations. Keep entries factual and short.
 
+## 2026-09-24
+
+### Firefox and WebKit lightweight desktop smoke coverage pilot
+
+- Type: `test`, `CI`, `documentation`
+- Files: `tests/desktop-smoke.spec.mjs`, `playwright.config.mjs`, `package.json`, `.github/workflows/verify.yml`, `README.md`, `TASK_STATE.md`, `docs/worklog.md`
+- Completed: Added lightweight cross-browser desktop smoke automated tests for Firefox and WebKit (`tests/desktop-smoke.spec.mjs`) covering core non-codec static and preview behaviors (homepage loading, version badge presence, control visibility, `?preview=loading`, `?preview=both` 2-track preview, viewport overflow checks at `1024x768` and `1440x900`, direct `file://` static asset loading, and zero console/page errors). Configured Playwright projects in `playwright.config.mjs`, updated `package.json` with `"test:e2e"` (Chromium full E2E) and `"test:smoke:browsers"` (Firefox/WebKit smoke), and updated GitHub Actions workflow to install dependencies and run both test suites.
+- Verification: `npm run test:report`, `npm run test:dsp`, `npm run test:e2e` (4 passed), `npm run test:smoke:browsers` (4 passed across firefox-smoke and webkit-smoke), and `git diff --check` passed.
+- Risk: Non-Chromium coverage is currently limited to lightweight desktop smoke testing; full synthetic WAV upload/decode regression remains Chromium-only. Real audio codec behavior and human listening remain unverified on non-Chromium browsers.
+
 ## 2026-09-09
 
 ### Git history privacy cleanup and GitHub Pages restoration

@@ -14,7 +14,7 @@
 npm run serve
 ```
 
-如果這台電腦沒有 Node/npm，也可以直接使用 Python：
+如果這台電腦沒有 Node/npm，也可以自由使用 Python：
 
 ```powershell
 python -m http.server 8123 --bind 127.0.0.1
@@ -39,17 +39,19 @@ npm run smoke:manual
 npm run test:report
 npm run test:dsp
 npm run test:e2e
+npm run test:smoke:browsers
 ```
 
 - `smoke:manual`：列出 preview smoke check URL；不會自動開瀏覽器。
 - `test:report`：在 Node 環境執行既有 report self-test。
 - `test:dsp`：驗證 mono、stereo、多聲道與極短音訊的安全量測行為。
-- `test:e2e`：以 Chromium-based Playwright 瀏覽器覆蓋 empty、loading、preview、報告複製及 console 基本回歸；這是目前自動驗收的瀏覽器範圍。
+- `test:e2e`：以 Chromium-based Playwright 瀏覽器進行完整 E2E（包含合成 WAV 上傳／解碼與互動流程）。
+- `test:smoke:browsers`：以 Firefox / WebKit 執行輕量桌面 smoke coverage，驗證 core layout、控制項、preview 狀態與靜態資產載入（不依賴真實音訊解碼 codec）。
 
-首次執行 E2E 時需安裝 Chromium：
+首次執行 E2E 與跨瀏覽器 smoke 時需安裝瀏覽器依賴：
 
 ```powershell
-npx playwright install chromium
+npx playwright install --with-deps chromium firefox webkit
 ```
 
 ## 多聲道量測說明
