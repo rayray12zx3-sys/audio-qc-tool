@@ -8,9 +8,7 @@
 
 - 維持瀏覽器端、可部署至 GitHub Pages 的 PR / AU 新手調音建議工具。
 - 正式支援環境改為 PC／桌面瀏覽器；手機僅維持基本可開啟，不列入必要驗收。
-- `main`／`origin/main` 已包含 history rewrite 後的 `v0.3.2` code commit `ce5b22c` 與 CI runtime maintenance commit `810424b`；history rewrite release tip 為 `1f918fc`，本次交接文件提交追加其上，本機工作目錄已收斂。
 - 音訊判斷維持 `estimated`、`heuristic`、`suggested`、`starting point` 定位，不宣稱為標準級 QC 或取代人工聆聽。
-- 公開 repo 已補強 secrets／local configuration ignore 規則與憑證／個資提交規範；repository-local Git author 改用 GitHub noreply email。
 - 補齊 Firefox / WebKit 低風險桌面 smoke coverage，同時維持既有 Chromium 完整 E2E 與 DSP／report 驗證。
 
 ## 已確認現況
@@ -37,7 +35,7 @@
 | `.github/workflows/verify.yml` | CI 安裝 `chromium firefox webkit` 依賴並執行 `test:e2e` 與 `test:smoke:browsers` |
 | `README.md`、`TASK_STATE.md`、`docs/worklog.md` | 說明跨瀏覽器 smoke coverage 指令、驗證範圍與交接紀錄 |
 
-正式基準分支：`main`；history rewrite 後的 `v0.3.2` code commit `ce5b22c`、CI runtime maintenance commit `810424b` 與 release tip `1f918fc` 已推送至 `origin/main`，交接文件變更追加於其上。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
+正式基準分支：`main`。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
 
 ## 驗證狀態
 
@@ -48,10 +46,6 @@
 - `npm run test:smoke:browsers`（Firefox-smoke 2 項、WebKit-smoke 2 項，共 4 項測試）通過，涵蓋首頁載入、版本 badge、控制項可見度、`?preview=loading`、`?preview=both` 兩軌 preview、`1024x768` / `1440x900` 無溢位、零 console/page error 及 `file://` classic assets 載入。
 - `.github/workflows/verify.yml` 已配置 `npx playwright install --with-deps chromium firefox webkit` 及雙層測試執行。
 - `git diff --check` 通過。
-- 既有 GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至 `v7`；先前 Verify #12 成功且原 Node.js 20 棄用警告已消失。
-- History rewrite 已覆蓋 17 個 reachable refs／36 個 commits；author／committer 非 GitHub `noreply` 計數為 0，reachable history 無 credential pattern、私人音檔路徑或 audio-like path；所有 refs 的 tree 保持不變。
-- `git push --force-with-lease` 已更新 9 個 origin branches；推送後遠端 rewrite tip SHA 已核對一致。
-- GitHub Pages source 已儲存為 `main`／`(root)`；公開網址先前已驗證可載入主要靜態資產且無 console error／warn。
 
 ## 下一步
 
@@ -66,10 +60,8 @@
 - 部分格式或瀏覽器可能無法快速提供 metadata；此批選擇安全拒絕而非解碼原始大檔，使用者需改輸出代表片段。
 - mono downmix 對反相或複雜多聲道素材可能抵消頻段與噪音能量；目前會抑制相關建議，但尚未提供逐聲道頻譜，>2 聲道仍只有 caveat。
 - 自動化 Firefox / WebKit 目前僅涵蓋輕量桌面 smoke coverage（不依賴真實音訊解碼 codec）；完整合成 WAV 上傳與解碼流程仍由 Chromium E2E 驗證。不同瀏覽器間真實 codec 支援與 Web Audio 解碼細節仍可能存在差異。
-- `v0.3.2` 的程式 tree 已通過本地驗證並完成 history rewrite／force push；repository 已公開，GitHub Pages 已從 `main`／`(root)` 建置並可載入公開網址。
 - 手機不再是正式支援環境，未執行本批手機版 smoke check。
 - `真實音檔/` 及私人來源檔不可提交或上傳。
-- 目前 tracked files 與 reachable rewritten history 未發現明顯 API Key、token、password、email-like content 或私人音檔路徑；原始 pre-rewrite history 僅保留在本機 reflog／暫存 backup bundle 與 mirror，這些檔案不可分享或提交。GitHub 對遠端 unreachable object／cache 的清理時間不由本 repo 控制。
 
 ## 維護方式
 

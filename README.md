@@ -14,7 +14,7 @@
 npm run serve
 ```
 
-如果這台電腦沒有 Node/npm，也可以直接使用 Python：
+如果這台電腦沒有 Node/npm，也可以自由使用 Python：
 
 ```powershell
 python -m http.server 8123 --bind 127.0.0.1
