@@ -2,14 +2,16 @@
 
 這是本專案跨對話的持續狀態檔。新對話應先讀本檔，再以目前檔案與 Git 狀態核對；若兩者不一致，以實際狀態為準並修正本檔。
 
-最後更新：2026-09-24（新增 Firefox / WebKit 桌面跨瀏覽器 smoke coverage）
+最後更新：2026-09-25（保留 v0.3.2 release/history/privacy context，新增 Firefox / WebKit 桌面 smoke coverage）
 
 ## 目前目標
 
 - 維持瀏覽器端、可部署至 GitHub Pages 的 PR / AU 新手調音建議工具。
 - 正式支援環境改為 PC／桌面瀏覽器；手機僅維持基本可開啟，不列入必要驗收。
+- 已補齊 Firefox / WebKit 低風險桌面 smoke coverage，同時維持既有 Chromium 完整 E2E 與 DSP／report 驗證。
+- `main`／`origin/main` 已包含 history rewrite 後的 `v0.3.2` code commit `ce5b22c` 與 CI runtime maintenance commit `810424b`；history rewrite release tip 為 `1f918fc`，本次交接文件提交追加其上，本機工作目錄已收斂。
 - 音訊判斷維持 `estimated`、`heuristic`、`suggested`、`starting point` 定位，不宣稱為標準級 QC 或取代人工聆聽。
-- 補齊 Firefox / WebKit 低風險桌面 smoke coverage，同時維持既有 Chromium 完整 E2E 與 DSP／report 驗證。
+- 公開 repo 已補強 secrets／local configuration ignore 規則與憑證／個資提交規範；repository-local Git author 改用 GitHub noreply email。
 
 ## 已確認現況
 
@@ -22,30 +24,35 @@
 - 效果鏈可作用節點改為真正的 `<button>`，檔名進入 `innerHTML` 前會 escape，長檔名可換行且不會擠壓「重新選擇」按鈕；文字對比亦已提高。
 - 頁首 badge、package metadata、複製報告與 E2E 期望值已同步為 `v0.3.2 · 更新 2026-08-19`。
 - 原有每軌 run token、共用 loading count、128 MiB／300 秒 metadata preflight、classic script 靜態架構與 `file://` 相容性均保留。
-- 建立 Firefox / WebKit 輕量桌面 smoke coverage（`tests/desktop-smoke.spec.mjs`），重點驗證不依賴真實 codec 差異的核心靜態與 preview 行為。
+- 已新增 Firefox / WebKit 輕量桌面 smoke coverage（`tests/desktop-smoke.spec.mjs`），驗證不依賴真實 codec 差異的核心靜態與 preview 行為；完整合成 WAV upload/decode 仍由 Chromium E2E 驗證。
 - 尚未完成人工聆聽，因此 Noise、Dynamics、EQ、DeEsser、Stereo Width 與 Ducking 的主觀門檻未調整；Worker／取消與 Final Mix QC 也未納入本批。
 
 ## 本批變更範圍
 
 | 檔案 | 用途 |
 | --- | --- |
-| `tests/desktop-smoke.spec.mjs` | Firefox / WebKit 輕量桌面 smoke 自動測試（靜態頁面、控制項、preview 狀態、版面無溢位、classic static assets） |
-| `playwright.config.mjs` | 配置 `chromium`（完整 E2E）與 `firefox-smoke` / `webkit-smoke`（跨瀏覽器 smoke）專案 |
-| `package.json` | 更新 `"test:e2e"` 專持 Chromium；新增 `"test:smoke:browsers"` 執行跨瀏覽器 smoke 測試 |
-| `.github/workflows/verify.yml` | CI 安裝 `chromium firefox webkit` 依賴並執行 `test:e2e` 與 `test:smoke:browsers` |
-| `README.md`、`TASK_STATE.md`、`docs/worklog.md` | 說明跨瀏覽器 smoke coverage 指令、驗證範圍與交接紀錄 |
+| `audio-analysis.js`、`tests/dsp-self-test.mjs` | DSP 邊界、正規化、反相寬度與 deterministic regression |
+| `app.js`、`scripts/report-self-test.mjs` | 建議邏輯、單位／文案、負相關保護、Ducking 與整合回歸 |
+| `index.html`、`styles.css`、`tests/app.spec.mjs` | accessibility、安全輸出、桌面版面與 Chromium E2E |
+| `package.json`、`package-lock.json`、`README.md`、`docs/` | `0.3.2` 版本、可攜性說明與交接 |
+| `tests/desktop-smoke.spec.mjs`、`playwright.config.mjs` | Firefox / WebKit 輕量桌面 smoke coverage 與 Playwright projects |
+| `.github/workflows/verify.yml`、`package.json` | CI 安裝 Chromium / Firefox / WebKit，保留 Chromium full E2E 並新增跨瀏覽器 smoke command |
 
-正式基準分支：`main`。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
+正式基準分支：`main`；history rewrite 後的 `v0.3.2` code commit `ce5b22c`、CI runtime maintenance commit `810424b` 與 release tip `1f918fc` 已推送至 `origin/main`，交接文件變更追加於其上。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
 
 ## 驗證狀態
 
-- `node --check audio-analysis.js`、`node --check app.js` 通過。
-- `npm run test:report`（report self-test）通過。
-- `npm run test:dsp`（DSP self-test）通過。
-- `npm run test:e2e`（Chromium Playwright E2E 4 項測試）通過，涵蓋 empty/loading/preview/copy/keyboard、合成 WAV upload 替換與大檔拒絕、accessibility/安全驗證及 `file://` classic assets 載入。
-- `npm run test:smoke:browsers`（Firefox-smoke 2 項、WebKit-smoke 2 項，共 4 項測試）通過，涵蓋首頁載入、版本 badge、控制項可見度、`?preview=loading`、`?preview=both` 兩軌 preview、`1024x768` / `1440x900` 無溢位、零 console/page error 及 `file://` classic assets 載入。
-- `.github/workflows/verify.yml` 已配置 `npx playwright install --with-deps chromium firefox webkit` 及雙層測試執行。
-- `git diff --check` 通過。
+- 2026-09-09 `node --check audio-analysis.js`、`node --check app.js`、report self-test、DSP self-test 與 `git diff --check` 通過。
+- DSP self-test 涵蓋同相／反相寬度、零長度有限值、399.98 ms／400 ms loudness 連續、Hann 正規化與最後完整 STFT frame。
+- report self-test 涵蓋負相關建議抑制、BGM base gain 與 Duck Amount 只套用一次、LUFS／dB 單位、檔名 escape、自訂 `0`／無效值及 stale run 競態。
+- localhost in-app browser 於 `1440x900`、`1024x768` 複核 empty、loading、voice、bgm、both、error-voice、error-bgm、large-file、自訂錯誤、結果卡與 Ducking 區；皆無水平溢位或 console error/warn。
+- Playwright Chromium E2E 重新驗證 4 項通過（2.9 秒）：兩種桌面尺寸與 preview states、合成 WAV upload／換檔／大檔拒絕、accessibility／自訂驗證／長惡意檔名，以及 `file://` classic assets；GitHub Actions `Verify #10` 為 rewrite 前同一 tree 的成功紀錄。
+- GitHub Actions runtime 已由 `actions/checkout@v4`／`actions/setup-node@v4` 升級至官方目前使用的 `v7`；`Verify #12` 為 rewrite 前同一 workflow 的成功紀錄（44 秒），annotations 為空，原 Node.js 20 棄用警告已消失。
+- History rewrite 已覆蓋 17 個 reachable refs／36 個 commits；author／committer 非 GitHub `noreply` 計數為 0，reachable history 無 credential pattern、私人音檔路徑或 audio-like path；所有 refs 的 tree 保持不變。
+- `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 rewrite tip SHA 全部核對一致；文件提交後已以一般 fast-forward push 與 `git rev-parse`／`git ls-remote` 重新核對 `main`／`origin/main` 一致。
+- GitHub Pages source 已儲存為 `main`／`(root)`；公開網址已載入工具頁面，HTTP 200 通過 `index.html`、`styles.css`、`audio-analysis.js`、`app.js`，console error／warn 為 0。
+- Firefox / WebKit smoke：`npm run test:smoke:browsers` 共 4 項測試通過，涵蓋首頁、控制項、preview states、1024x768 / 1440x900 溢位、`file://` classic assets 與 zero console/page errors；PR #10 的 GitHub Actions Verify 在最終 head 通過後才 merge。
+- 本批仍未執行真實音檔聆聽；Firefox / WebKit 尚未驗證真實 codec upload/decode 行為。
 
 ## 下一步
 
@@ -59,9 +66,11 @@
 - `index.html` 必須和 `styles.css`、`audio-analysis.js`、`app.js` 一起複製或部署；缺少任一檔案都會使頁面失效。
 - 部分格式或瀏覽器可能無法快速提供 metadata；此批選擇安全拒絕而非解碼原始大檔，使用者需改輸出代表片段。
 - mono downmix 對反相或複雜多聲道素材可能抵消頻段與噪音能量；目前會抑制相關建議，但尚未提供逐聲道頻譜，>2 聲道仍只有 caveat。
-- 自動化 Firefox / WebKit 目前僅涵蓋輕量桌面 smoke coverage（不依賴真實音訊解碼 codec）；完整合成 WAV 上傳與解碼流程仍由 Chromium E2E 驗證。不同瀏覽器間真實 codec 支援與 Web Audio 解碼細節仍可能存在差異。
+- Chromium 仍是完整 synthetic WAV upload/decode E2E 的自動驗證瀏覽器；Firefox / WebKit 目前只做不依賴真實 codec 的輕量 desktop smoke，真實 codec/Web Audio 行為仍可能不同。
+- `v0.3.2` 的程式 tree 已通過本地驗證並完成 history rewrite／force push；repository 已公開，GitHub Pages 已從 `main`／`(root)` 建置並可載入公開網址。
 - 手機不再是正式支援環境，未執行本批手機版 smoke check。
 - `真實音檔/` 及私人來源檔不可提交或上傳。
+- 目前 tracked files 與 reachable rewritten history 未發現明顯 API Key、token、password、email-like content 或私人音檔路徑；原始 pre-rewrite history 僅保留在本機 reflog／暫存 backup bundle 與 mirror，這些檔案不可分享或提交。GitHub 對遠端 unreachable object／cache 的清理時間不由本 repo 控制。
 
 ## 維護方式
 
