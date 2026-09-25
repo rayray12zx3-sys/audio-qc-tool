@@ -85,3 +85,34 @@
 - 不要用太制式的預設版型。
 - 音檔工具介面要重視資訊層級、操作回饋與狀態顯示。
 - 手機僅維持基本可開啟與不明顯崩版，不列入必要驗收；除非需求明確指定，否則不需執行手機版 smoke check。
+
+
+## Jules / Scheduled Tasks 安全邊界
+
+Jules 可作為 bounded、repository-only 工作的執行者；Scheduled Tasks 只允許低風險、可客觀驗證、且不改變產品核心行為的維護工作。
+
+### Scheduled / autonomous 可做
+
+- 新增或補強既有測試，前提是不為了讓測試通過而放寬既有 assertion
+- 修正明確的測試 fixture、靜態檢查或文件 drift
+- 修正可由現有 CI／Playwright／self-test 直接重現與驗證的小型非核心問題
+- 更新與實際指令、測試範圍一致的 README／TASK_STATE／worklog 描述
+
+### Scheduled / autonomous 不可做
+
+- 修改 DSP 公式、量測尺度、音訊建議門檻或主觀調音策略
+- 修改 `audio-analysis.js` 的核心量測行為
+- 大幅修改 `app.js`、UI flow、copy 或 accessibility 行為
+- 修改 `.github/workflows/**`、dependency versions、lockfile 或 release/version，除非任務明確指定且經人工啟動
+- 依推測新增「最佳化」或重構；沒有客觀問題就不得創造工作
+- 修改真實音檔、私人素材或任何不應進 Git 的資料
+- 自動 merge
+
+若沒有符合安全範圍且能以現有測試／CI 客觀驗證的工作，回報 `NO_ACTION`，不要建立無意義 PR。
+
+### 衝突與 diff guard
+
+- Scheduled Tasks 不得與已知進行中的 PR／Issue 重複處理同一問題。
+- 修改前先讀 `TASK_STATE.md`；若 current state 顯示正在進行相同區域的工作，停止並回報。
+- PR 必須保持單一目的；任何與任務無關的文案、格式、命名或重構變更都必須移除。
+- 若需要碰到上述 protected path／核心行為，將工作升級為人工啟動的 Jules Issue 或 Codex，不得自行擴張 scope。
