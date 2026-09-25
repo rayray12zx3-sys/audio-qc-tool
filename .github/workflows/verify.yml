@@ -18,5 +18,6 @@ jobs:
       - run: npm ci
       - run: npm run test:report
       - run: npm run test:dsp
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run test:e2e
+      - run: npm run test:smoke:browsers
