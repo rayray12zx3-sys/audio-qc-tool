@@ -2,6 +2,27 @@
 
 瀏覽器端音檔匯入、分析與建議報告工具，目標是給 PR / AU 新手取得可操作的調音起點。輸出內容是瀏覽器端近似分析與建議，不是專業 loudness meter 或標準級 QC 報告。
 
+<!-- PROJECT_PROGRESS:START -->
+## 開發進度
+
+**目前狀態：** 🟡 Post-release validation / maintenance  
+**Current milestone：** 尚未定義 bounded milestone，因此不顯示虛假的百分比  
+**目前驗證 Gate：** 真實音檔人工聆聽，完成前不調整主觀門檻  
+**自動驗證：** Chromium E2E、DSP/report self-test、Firefox/WebKit desktop smoke 已依 `TASK_STATE.md` 通過  
+**Next action：** 完成人工聆聽並記錄 matched / missed / overreacted  
+**Exit condition：** 聆聽結果被記錄，且主觀 threshold 是否需要調整有明確決策  
+**Last verified：** 2026-09-26
+
+```text
+✅ v0.3.2 release / history / Pages baseline
+✅ Cross-browser desktop smoke coverage
+🟡 Human listening validation  ← CURRENT
+└─ ⬜ Threshold decision / follow-up
+```
+
+Detailed tree and evidence: [PROJECT_PROGRESS.md](PROJECT_PROGRESS.md)
+<!-- PROJECT_PROGRESS:END -->
+
 本工具以 PC／桌面瀏覽器為正式支援環境，方便直接選取電腦內的音檔。手機僅維持基本可開啟，不保證完整操作體驗。
 
 為避免大型原始檔在瀏覽器解碼時耗盡記憶體，匯入前會檢查檔案大小與 metadata 時長：上限為 128 MiB、五分鐘，且五秒內無法確認時長會安全拒絕。請在 PR／AU 匯出不超過五分鐘的代表片段；工具不會強制繼續或在瀏覽器裁切原始檔。
