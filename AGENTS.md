@@ -116,3 +116,10 @@ Jules 可作為 bounded、repository-only 工作的執行者；Scheduled Tasks �
 - 修改前先讀 `TASK_STATE.md`；若 current state 顯示正在進行相同區域的工作，停止並回報。
 - PR 必須保持單一目的；任何與任務無關的文案、格式、命名或重構變更都必須移除。
 - 若需要碰到上述 protected path／核心行為，將工作升級為人工啟動的 Jules Issue 或 Codex，不得自行擴張 scope。
+
+## Project progress view
+
+- `PROJECT_PROGRESS.md` 與 README 的 `PROJECT_PROGRESS` marker 區塊是 derived coordination view；`TASK_STATE.md`、實際 Git 狀態、測試／CI evidence 與 worklog 仍依既有規則判定現況。
+- milestone／phase／gate、required scope、blocker、required verification 或 checkpoint/handoff 有實質變化後，由協調層同步 progress view。
+- Scheduled Tasks／bounded Jules task 不得只為了同步 progress view 擴張 allowed scope；若原任務不包含 progress files，由 general ChatGPT／Codex orchestration 在驗證結果後另行更新。
+- 沒有 bounded milestone 或客觀 denominator 時顯示 N/A／counts，不得由 Agent 主觀估算完成百分比。
