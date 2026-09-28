@@ -38,6 +38,11 @@ test('desktop smoke: core layout, controls, preview states, and static assets', 
   await expect(page.locator('#st-voice')).toContainText('解碼失敗：Preview 狀態，模擬瀏覽器不支援此格式');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 
+  await page.goto('/?preview=error-bgm');
+  await expect(page.locator('#st-bgm')).toHaveClass(/show/);
+  await expect(page.locator('#st-bgm')).toContainText('解碼失敗：Preview 狀態，模擬瀏覽器不支援此格式');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+
   await page.goto('/?preview=both');
   await expect(page.locator('#res-voice')).toHaveClass(/show/);
   await page.locator('#tab-bgm').click();
