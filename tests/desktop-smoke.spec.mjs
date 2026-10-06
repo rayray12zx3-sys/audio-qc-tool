@@ -43,6 +43,18 @@ test('desktop smoke: core layout, controls, preview states, and static assets', 
   await expect(page.locator('#st-bgm')).toContainText('解碼失敗：Preview 狀態，模擬瀏覽器不支援此格式');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 
+  await page.goto('/?preview=voice');
+  await expect(page.locator('#tab-voice')).toHaveClass(/active/);
+  await expect(page.locator('#res-voice')).toHaveClass(/show/);
+  await expect(page.locator('#copyBtn')).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+
+  await page.goto('/?preview=bgm');
+  await expect(page.locator('#tab-bgm')).toHaveClass(/active/);
+  await expect(page.locator('#res-bgm')).toHaveClass(/show/);
+  await expect(page.locator('#copyBtn')).toBeEnabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+
   await page.goto('/?preview=both');
   await expect(page.locator('#res-voice')).toHaveClass(/show/);
   await page.locator('#tab-bgm').click();

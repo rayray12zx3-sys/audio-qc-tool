@@ -35,7 +35,7 @@
 | `app.js`、`scripts/report-self-test.mjs` | 建議邏輯、單位／文案、負相關保護、Ducking 與整合回歸 |
 | `index.html`、`styles.css`、`tests/app.spec.mjs` | accessibility、安全輸出、桌面版面與 Chromium E2E |
 | `package.json`、`package-lock.json`、`README.md`、`docs/` | `0.3.2` 版本、可攜性說明與交接 |
-| `tests/desktop-smoke.spec.mjs`、`playwright.config.mjs` | Firefox / WebKit 輕量桌面 smoke coverage 與 Playwright projects |
+| `tests/desktop-smoke.spec.mjs`、`playwright.config.mjs` | Firefox / WebKit 輕量桌面 smoke coverage（包含 preview=voice 與 preview=bgm）與 Playwright projects |
 | `.github/workflows/verify.yml`、`package.json` | CI 安裝 Chromium / Firefox / WebKit，保留 Chromium full E2E 並新增跨瀏覽器 smoke command |
 
 正式基準分支：`main`；history rewrite 後的 `v0.3.2` code commit `ce5b22c`、CI runtime maintenance commit `810424b` 與 release tip `1f918fc` 已推送至 `origin/main`，交接文件變更追加於其上。Repository 已公開；GitHub Pages source 為 `main`／`(root)`，公開網址為 `https://rayray12zx3-sys.github.io/audio-qc-tool/`。
@@ -51,7 +51,7 @@
 - History rewrite 已覆蓋 17 個 reachable refs／36 個 commits；author／committer 非 GitHub `noreply` 計數為 0，reachable history 無 credential pattern、私人音檔路徑或 audio-like path；所有 refs 的 tree 保持不變。
 - `git push --force-with-lease` 已更新 9 個 origin branches，推送後遠端 rewrite tip SHA 全部核對一致；文件提交後已以一般 fast-forward push 與 `git rev-parse`／`git ls-remote` 重新核對 `main`／`origin/main` 一致。
 - GitHub Pages source 已儲存為 `main`／`(root)`；公開網址已載入工具頁面，HTTP 200 通過 `index.html`、`styles.css`、`audio-analysis.js`、`app.js`，console error／warn 為 0。
-- Firefox / WebKit smoke：`npm run test:smoke:browsers` 共 4 項測試通過，涵蓋首頁、控制項、preview states、1024x768 / 1440x900 溢位、`file://` classic assets 與 zero console/page errors；PR #10 的 GitHub Actions Verify 在最終 head 通過後才 merge。
+- Firefox / WebKit smoke：`npm run test:smoke:browsers` 共 4 項測試通過，涵蓋首頁、控制項、preview states（新增 preview=voice 與 preview=bgm 涵蓋）、1024x768 / 1440x900 溢位、`file://` classic assets 與 zero console/page errors；PR #10 的 GitHub Actions Verify 在最終 head 通過後才 merge。
 - 本批仍未執行真實音檔聆聽；Firefox / WebKit 尚未驗證真實 codec upload/decode 行為。
 
 ## 下一步
